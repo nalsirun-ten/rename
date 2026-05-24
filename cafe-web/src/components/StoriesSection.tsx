@@ -146,7 +146,7 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
 // ─── Section ──────────────────────────────────────────────────────
 
 export default function StoriesSection() {
-  const { stories, isLoading, seenStories, markAsSeen } = useStoriesStore();
+  const { stories, isLoading, seenStories, markAsSeen, openStory } = useStoriesStore();
 
   // Sort: unseen first, seen last (Instagram-style)
   const sorted = [...stories].sort((a, b) => {
@@ -177,7 +177,10 @@ export default function StoriesSection() {
                 key={story.id || String(index)}
                 story={story}
                 isSeen={seenStories.has(story.id)}
-                onTap={() => markAsSeen(story.id)}
+                onTap={() => {
+                  markAsSeen(story.id);
+                  openStory(story.id);
+                }}
               />
             ))}
           </div>

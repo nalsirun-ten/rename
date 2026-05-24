@@ -4,6 +4,8 @@ import HomePage from '../pages/HomePage';
 import BranchesPage from '../pages/BranchesPage';
 import MenuPage from '../pages/MenuPage';
 import ProfilePage from '../pages/ProfilePage';
+import StoryViewer from './StoryViewer';
+import BranchDetailModal from './BranchDetailModal';
 
 const SCREENS = [
   <HomePage key="home" />,
@@ -41,6 +43,12 @@ export default function MainShell() {
 
         {/* Bottom Navigation */}
         <BottomNav />
+        
+        {/* Story Viewer Modal */}
+        <StoryViewer />
+
+        {/* Branch Detail Modal */}
+        <BranchDetailModal />
       </div>
     </div>
   );

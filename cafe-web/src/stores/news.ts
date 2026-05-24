@@ -41,6 +41,7 @@ const MOCK_NEWS: NewsItem[] = [
     title: 'Новое летнее меню уже здесь!',
     content: 'Мы обновили меню: свежие лимонады, холодный кофе и новые десерты. Заходите попробовать первыми! В ассортименте: лавандовый раф, матча-латте со льдом, фирменный айс-капучино и многое другое.',
     category: 'promo',
+    imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&h=500',
     createdAt: '2026-05-22T10:00:00Z',
   },
   {
@@ -48,6 +49,7 @@ const MOCK_NEWS: NewsItem[] = [
     title: 'Мастер-класс по латте-арту',
     content: 'Приглашаем всех желающих на бесплатный мастер-класс! Наш бариста Азамат покажет, как создавать красивый латте-арт. Суббота, 15:00. Количество мест ограничено, записывайтесь у администратора.',
     category: 'event',
+    imageUrl: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=800&h=500',
     createdAt: '2026-05-18T14:00:00Z',
   },
   {
@@ -55,6 +57,7 @@ const MOCK_NEWS: NewsItem[] = [
     title: 'Скидка 20% на все десерты',
     content: 'Только в эти выходные скидка 20% на все десерты при заказе любого кофе. Попробуйте наш фирменный чизкейк и тирамису! Акция действует во всех филиалах.',
     category: 'promo',
+    imageUrl: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&h=500',
     createdAt: '2026-05-15T08:00:00Z',
   },
   {
@@ -62,6 +65,7 @@ const MOCK_NEWS: NewsItem[] = [
     title: 'Открытие нового филиала',
     content: 'Мы открываем новый филиал в центре города! Адрес: ул. Чуй, 123. В день открытия — бесплатный кофе для первых 50 гостей. Ждём вас!',
     category: 'event',
+    imageUrl: 'https://images.unsplash.com/photo-1521017430055-16c141753381?auto=format&fit=crop&w=800&h=500',
     createdAt: '2026-05-10T12:00:00Z',
   },
   {
@@ -69,6 +73,7 @@ const MOCK_NEWS: NewsItem[] = [
     title: 'Новые часы работы',
     content: 'Обратите внимание: с 1 июня мы переходим на летний режим работы. Теперь мы открыты с 7:00 до 23:00 ежедневно. Утренний кофе стал ещё доступнее!',
     category: 'info',
+    imageUrl: 'https://images.unsplash.com/photo-1506844902148-1cd7eb230238?auto=format&fit=crop&w=800&h=500',
     createdAt: '2026-05-05T09:00:00Z',
   },
 ];

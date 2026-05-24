@@ -82,36 +82,50 @@ function NewsCard({
           overflow: 'hidden',
         }}
       >
-        {/* Background: dark gradient (no image in mock data) */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(135deg, #4A3B32 0%, #2C1F17 100%)',
-          }}
-        />
-
-        {/* Fallback icon when no image */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <span
-            className="icon-material"
+        {/* Background image or fallback */}
+        {item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt={item.title}
             style={{
-              fontSize: 40,
-              color: 'rgba(255,255,255,0.32)',
-              fontVariationSettings: "'FILL' 1",
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
             }}
-          >
-            article
-          </span>
-        </div>
+          />
+        ) : (
+          <>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(135deg, #4A3B32 0%, #2C1F17 100%)',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span
+                className="icon-material"
+                style={{
+                  fontSize: 40,
+                  color: 'rgba(255,255,255,0.32)',
+                  fontVariationSettings: "'FILL' 1",
+                }}
+              >
+                article
+              </span>
+            </div>
+          </>
+        )}
 
         {/* Gradient overlay: transparent → 10% at 40% → 85% at bottom */}
         <div

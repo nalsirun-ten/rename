@@ -19,7 +19,7 @@ const MOCK_MENU: MenuItem[] = [
     title: 'Бамбл-кофе',
     description: 'Освежающий трехслойный напиток на основе апельсинового фреша, карамельного сиропа и двойного эспрессо. Идеально бодрит в жаркие летние дни.',
     price: 250,
-    imageUrl: coffee3dImage,
+    imageUrl: 'https://images.unsplash.com/photo-1578314675249-a6910f80cc4e?auto=format&fit=crop&w=400&h=400',
     isFavorite: false,
   },
   {
@@ -27,7 +27,7 @@ const MOCK_MENU: MenuItem[] = [
     title: 'Капучино',
     description: 'Сливочный капучино с нежной пенкой.',
     price: 150,
-    imageUrl: coffee3dImage,
+    imageUrl: 'https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=400&h=400',
     isFavorite: false,
   },
   {
@@ -35,7 +35,7 @@ const MOCK_MENU: MenuItem[] = [
     title: 'Круассан классический',
     description: 'Хрустящий круассан на сливочном масле.',
     price: 120,
-    imageUrl: restoranImage, // Mocking with available image
+    imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&h=400',
     isFavorite: false,
   },
   {
@@ -43,7 +43,7 @@ const MOCK_MENU: MenuItem[] = [
     title: 'Круассан с миндалем',
     description: 'Свежевыпеченный французский круассан с щедрой начинкой из сладкого миндального крема (франжипана) и лепестками миндаля сверху. Подаётся тёплым.',
     price: 160,
-    imageUrl: restoranImage,
+    imageUrl: 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?auto=format&fit=crop&w=400&h=400',
     isFavorite: false,
   },
   {
@@ -51,7 +51,7 @@ const MOCK_MENU: MenuItem[] = [
     title: 'Фисташковый рулет',
     description: 'Легкий меренговый рулет со сливочно-фисташковым кремом и свежей малиной. Буквально тает во рту и оставляет нежное ореховое послевкусие.',
     price: 240,
-    imageUrl: restoranImage,
+    imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&h=400',
     isFavorite: false,
   },
   {
@@ -59,7 +59,7 @@ const MOCK_MENU: MenuItem[] = [
     title: 'Флэт Уайт',
     description: 'Двойной эспрессо с тонким слоем нежной глянцевой молочной пены. Яркий кофейный вкус для тех, кто любит крепкий, но мягкий кофе.',
     price: 180,
-    imageUrl: coffee3dImage,
+    imageUrl: 'https://images.unsplash.com/photo-1579992357154-faf4bde95b3d?auto=format&fit=crop&w=400&h=400',
     isFavorite: false,
   },
   {
@@ -67,7 +67,7 @@ const MOCK_MENU: MenuItem[] = [
     title: 'Эспрессо',
     description: 'Бодрящий эспрессо из 100% арабики.',
     price: 100,
-    imageUrl: coffee3dImage,
+    imageUrl: 'https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=400&h=400',
     isFavorite: false,
   },
   {
@@ -75,7 +75,7 @@ const MOCK_MENU: MenuItem[] = [
     title: 'Эспрессо-тоник',
     description: 'Двойной эспрессо с холодным тоником, большим количеством льда и долькой сочного грейпфрута. Уникальный баланс горечи кофе и сладости тоника.',
     price: 220,
-    imageUrl: coffee3dImage,
+    imageUrl: 'https://images.unsplash.com/photo-1499961024600-ad094db305cc?auto=format&fit=crop&w=400&h=400',
     isFavorite: false,
   },
 ];

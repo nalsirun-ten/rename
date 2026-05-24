@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useProfileStore } from '../stores/profile';
 import coffeeCup3d from '@assets/images/coffee_cup_3d.png';
 import giftCup3d from '@assets/images/gift_cup_3d.png';
@@ -22,7 +23,6 @@ function StampItem({
   isGift: boolean;
 }) {
   const assetPath = isGift ? giftCup3d : coffeeCup3d;
-  const gold = '#FFD700';
   const dark = '#2C303A';
 
   // ─── FILLED: dark circle + image + checkmark overlay ───
@@ -133,10 +133,9 @@ function StampsInfoModal({ onClose }: { onClose: () => void }) {
     if (e.target === e.currentTarget) onClose();
   }, [onClose]);
 
-  return (
-    <div className="stamps-modal-overlay overlay-base" onClick={handleOverlay}>
-      <div className="stamps-modal-sheet sheet-base" style={{ maxHeight: '90vh', overflowY: 'auto', borderTopLeftRadius: 24, borderTopRightRadius: 24, border: '1px solid #E2E8F0', padding: 24 }}>
-        <div className="drag-handle" />
+  return createPortal(
+    <div className="overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
+      <div className="sheet-base flex-col" style={{ padding: 24, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)', overflowY: 'auto' }}>
         <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1E293B', marginBottom: 8 }}>Как это работает</h3>
         <p style={{ fontSize: 14, fontWeight: 500, color: '#64748B', lineHeight: 1.6, marginBottom: 20 }}>
           Мы ценим каждого гостя! Совершайте покупки и получайте любимый кофе в подарок.
@@ -162,7 +161,8 @@ function StampsInfoModal({ onClose }: { onClose: () => void }) {
           Понятно
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

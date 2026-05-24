@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   useReviewsStore,
   getRatingLabel,
@@ -396,10 +397,11 @@ export default function ReviewsSheet({ onClose }: Props) {
     return result;
   }, [reviews, search, filter]);
 
-  return (
+  return createPortal(
     <div
       className="rs-overlay overlay-base"
       onClick={handleOverlayClick}
+      style={{ zIndex: 9999 }}
     >
       <div
         ref={sheetRef}
@@ -414,9 +416,12 @@ export default function ReviewsSheet({ onClose }: Props) {
       >
         {/* ── Header ── */}
         <div className="flex-between" style={{ padding: '16px 20px 8px' }}>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1E293B', margin: 0 }}>
-            Отзывы
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
+              Отзывы
+            </h2>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
+          </div>
           <button
             className="btn-reset flex-center"
             onClick={onClose}
@@ -565,6 +570,7 @@ export default function ReviewsSheet({ onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

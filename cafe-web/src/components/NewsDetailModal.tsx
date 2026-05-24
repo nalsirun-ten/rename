@@ -5,6 +5,7 @@
 //   - Divider + full content text (15px, line-height 1.6)
 
 import { useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { NewsItem } from '../stores/news';
 import { getCategoryColor } from '../stores/news';
 
@@ -55,16 +56,29 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
     [onClose],
   );
 
-  return (
+  return createPortal(
     <div
       className="ndm-overlay overlay-base"
       onClick={handleOverlay}
     >
-      <div
-        className="ndm-sheet sheet-base"
-        style={{ maxHeight: '90vh', overflowY: 'auto', padding: 24 }}
-      >
-        <div className="drag-handle" />
+      <div className="sheet-base flex-col" style={{ overflowY: 'auto', padding: 24, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}>
+
+        {/* ── Header ── */}
+        <div className="flex-between" style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
+              {tag || 'Новость'}
+            </h2>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
+          </div>
+          <button 
+            className="btn-reset flex-center" 
+            onClick={onClose}
+            style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#F1F5F9' }}
+          >
+            <span className="icon-material" style={{ fontSize: 20, color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
+          </button>
+        </div>
 
         {/* ── Image (if available) ── */}
         {item.imageUrl ? (
@@ -181,6 +195,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
         {/* ── Bottom spacing ── */}
         <div style={{ height: 16 }} />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

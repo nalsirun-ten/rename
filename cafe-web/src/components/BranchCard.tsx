@@ -5,15 +5,18 @@ interface Props {
 }
 
 export default function BranchCard({ branch }: Props) {
-  const toggleSaved = useBranchesStore((s) => s.toggleSaved);
+  const { toggleSaved, openBranch } = useBranchesStore();
 
   return (
-    <div style={{
+    <div
+      onClick={() => openBranch(branch.id)}
+      style={{
       padding: '20px 0',
       margin: '0 20px',
       borderBottom: '1px solid #CBD5E1',
       display: 'flex',
       flexDirection: 'column',
+      cursor: 'pointer',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         {/* Left Side: Info */}
@@ -96,7 +99,10 @@ export default function BranchCard({ branch }: Props) {
         {/* Save Button */}
         <button
           className="btn-reset flex-center"
-          onClick={() => toggleSaved(branch.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleSaved(branch.id);
+          }}
           aria-label={branch.isSaved ? "Убрать из закладок" : "В закладки"}
           style={{
             width: 44,

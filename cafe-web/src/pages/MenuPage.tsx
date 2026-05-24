@@ -1,4 +1,4 @@
-import { useMenuStore, type MenuTab } from '../stores/menu';
+import { useMenuStore } from '../stores/menu';
 import MenuCard from '../components/MenuCard';
 
 export default function MenuPage() {

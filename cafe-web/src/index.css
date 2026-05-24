@@ -160,3 +160,12 @@ body {
   color: #64748B;
   opacity: 1; /* Firefox default is 0.54 */
 }
+
+/* Utilities */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

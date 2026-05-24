@@ -5,6 +5,7 @@ export interface Story {
   title: string;
   category: 'service' | 'promo' | 'menu' | 'places' | 'vip';
   imageUrl?: string;
+  videoUrl?: string;
   description?: string;
   createdAt?: string;
 }
@@ -18,24 +19,30 @@ export const CAT_CFG: Record<Story['category'], { name: string; icon: string; co
 };
 
 const MOCK_STORIES: Story[] = [
-  { id: '1', title: 'Новое латте', category: 'service', imageUrl: undefined },
-  { id: '2', title: 'Скидка 20%', category: 'promo', imageUrl: undefined },
-  { id: '3', title: 'Круассаны', category: 'menu', imageUrl: undefined },
-  { id: '4', title: 'Новый филиал', category: 'places', imageUrl: undefined },
-  { id: '5', title: 'VIP-карта', category: 'vip', imageUrl: undefined },
+  { id: '1', title: 'Новое латте', category: 'service', imageUrl: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=400&h=700' },
+  { id: '2', title: 'Скидка 20%', category: 'promo', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', imageUrl: 'https://images.unsplash.com/photo-1481833761820-0509d32170b4?auto=format&fit=crop&w=400&h=700' },
+  { id: '3', title: 'Круассаны', category: 'menu', imageUrl: 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?auto=format&fit=crop&w=400&h=700' },
+  { id: '4', title: 'Новый филиал', category: 'places', imageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&h=700' },
+  { id: '5', title: 'VIP-карта', category: 'vip', imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=400&h=700' },
 ];
 
 interface StoriesState {
   stories: Story[];
   isLoading: boolean;
   seenStories: Set<string>;
+  activeStoryId: string | null;
   markAsSeen: (id: string) => void;
+  openStory: (id: string) => void;
+  closeStory: () => void;
 }
 
 export const useStoriesStore = create<StoriesState>((set) => ({
   stories: MOCK_STORIES,
   isLoading: false,
   seenStories: new Set<string>(),
+  activeStoryId: null,
   markAsSeen: (id: string) =>
     set((state) => ({ seenStories: new Set([...state.seenStories, id]) })),
+  openStory: (id: string) => set({ activeStoryId: id }),
+  closeStory: () => set({ activeStoryId: null }),
 }));

@@ -6,9 +6,11 @@ interface Props {
   data: string;
   size: number;
   iconSize?: number;
+  color?: string;
+  backgroundColor?: string;
 }
 
-export default function QrCode({ data, size, iconSize = 28 }: Props) {
+export default function QrCode({ data, size, iconSize = 28, color = '#FFFFFF', backgroundColor = '#1B5E3D' }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,10 +30,10 @@ export default function QrCode({ data, size, iconSize = 28 }: Props) {
       type: 'canvas',
       shape: 'square',
       qrOptions: { errorCorrectionLevel: 'H', typeNumber: 3 },
-      dotsOptions: { type: 'dots', color: '#FFFFFF' },
-      cornersSquareOptions: { type: 'dot', color: '#FFFFFF' },
-      cornersDotOptions: { type: 'dot', color: '#FFFFFF' },
-      backgroundOptions: { color: '#1B5E3D' },
+      dotsOptions: { type: 'dots', color: color },
+      cornersSquareOptions: { type: 'dot', color: color },
+      cornersDotOptions: { type: 'dot', color: color },
+      backgroundOptions: { color: backgroundColor },
       image: appIcon,
       imageOptions: { crossOrigin: 'anonymous', imageSize: iconSize / size, margin: 4 * scale },
     }).append(el);

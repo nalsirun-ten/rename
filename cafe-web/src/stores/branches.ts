@@ -26,7 +26,7 @@ const MOCK_BRANCHES: Branch[] = [
     openTime: '08:00',
     closeTime: '22:00',
     type: 'Кофейня',
-    imageUrl: restoranImage,
+    imageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400',
     isOpen: true,
     isSaved: false,
   },
@@ -37,7 +37,7 @@ const MOCK_BRANCHES: Branch[] = [
     openTime: '09:00',
     closeTime: '23:00',
     type: 'Кофейня',
-    imageUrl: coffee3dImage,
+    imageUrl: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=600&h=400',
     isOpen: true,
     isSaved: false,
   },
@@ -48,7 +48,7 @@ const MOCK_BRANCHES: Branch[] = [
     openTime: '10:00',
     closeTime: '22:00',
     type: 'Точка на вынос',
-    imageUrl: restoranImage, // Reusing image for mock
+    imageUrl: 'https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=600&h=400',
     isOpen: true,
     isSaved: false,
   },
@@ -59,7 +59,7 @@ const MOCK_BRANCHES: Branch[] = [
     openTime: '08:00',
     closeTime: '23:00',
     type: 'Кофейня',
-    imageUrl: coffee3dImage, // Reusing image for mock
+    imageUrl: 'https://images.unsplash.com/photo-1453614512568-c4024d13c247?auto=format&fit=crop&w=600&h=400',
     isOpen: true,
     isSaved: false,
   },
@@ -70,9 +70,12 @@ interface BranchesState {
   searchQuery: string;
   filter: FilterType;
   activeTab: TabType;
+  activeBranchId: string | null;
   setSearchQuery: (query: string) => void;
   setFilter: (filter: FilterType) => void;
   setActiveTab: (tab: TabType) => void;
+  openBranch: (id: string) => void;
+  closeBranch: () => void;
   toggleSaved: (id: string) => void;
 }
 
@@ -81,9 +84,12 @@ export const useBranchesStore = create<BranchesState>((set) => ({
   searchQuery: '',
   filter: 'Все',
   activeTab: 'Списком',
+  activeBranchId: null,
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setFilter: (filter: FilterType) => set({ filter }),
   setActiveTab: (tab: TabType) => set({ activeTab: tab }),
+  openBranch: (id: string) => set({ activeBranchId: id }),
+  closeBranch: () => set({ activeBranchId: null }),
   toggleSaved: (id: string) =>
     set((state) => ({
       branches: state.branches.map((b) =>
