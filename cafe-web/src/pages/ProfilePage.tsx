@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useProfileStore } from '../stores/profile';
+import AboutCafeModal from '../components/AboutCafeModal';
 
 const MENU_ITEMS = [
   { icon: 'local_cafe', label: 'О кофейне', color: '#3B82F6', bg: '#EFF6FF' },
@@ -10,6 +12,7 @@ const MENU_ITEMS = [
 
 export default function ProfilePage() {
   const { name, phone } = useProfileStore();
+  const [isAboutCafeOpen, setIsAboutCafeOpen] = useState(false);
   const firstLetter = name.charAt(0).toUpperCase();
 
   return (
@@ -17,160 +20,129 @@ export default function ProfilePage() {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      backgroundColor: '#1B5E3D',
+      backgroundColor: '#F1F5F9', // Very light gray background
       overflowY: 'auto',
       WebkitOverflowScrolling: 'touch',
     }}>
       {/* ─── Header ─── */}
       <div style={{
-        padding: 'calc(env(safe-area-inset-top, 0px) + 32px) 20px 32px 20px',
-        position: 'relative',
-        zIndex: 10,
+        padding: 'calc(env(safe-area-inset-top, 0px) + 24px) 24px 32px 24px',
       }}>
         {/* Title */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-          <span style={{ fontSize: 20, fontWeight: 700, color: '#FFF' }}>
+        <div style={{ marginBottom: 32 }}>
+          <span style={{ fontSize: 24, fontWeight: 800, color: '#0F172A' }}>
             Профиль
           </span>
         </div>
 
-        {/* Profile Info Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {/* Left: User Card */}
-          <div style={{
-            backgroundColor: '#1E293B',
-            borderRadius: 32,
-            padding: '12px 8px',
-            aspectRatio: '1',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        {/* Minimalist Profile Info */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16
+        }}>
+          <div className="flex-center" style={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            backgroundColor: '#1B5E3D', // Brand Dark Green
+            color: '#FFF',
+            fontSize: 28,
+            fontWeight: 800,
+            flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(27, 94, 61, 0.3)',
           }}>
-            {/* Avatar */}
-            <div className="flex-center" style={{
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              backgroundColor: '#65A30D',
-              color: '#FFF',
-              fontSize: 36,
-              fontWeight: 800,
-              marginBottom: 10,
-            }}>
-              {firstLetter}
-            </div>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: '#FFF', marginBottom: 4, textAlign: 'center', lineHeight: 1.2 }}>
+            {firstLetter}
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h3 style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', marginBottom: 4, lineHeight: 1.2 }}>
               {name}
             </h3>
-            <p style={{ fontSize: 14, fontWeight: 500, color: '#94A3B8', textAlign: 'center' }}>
+            <p style={{ fontSize: 15, fontWeight: 500, color: '#64748B' }}>
               {phone}
             </p>
           </div>
-
-          {/* Right: Actions */}
-          <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 16 }}>
-            <button className="btn-reset" style={{
-              width: '100%',
-              height: '100%',
-              backgroundColor: '#0F172A',
-              borderRadius: 32,
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              {/* Emojis Background to simulate flags */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', flexWrap: 'wrap', gap: '4px',
-                padding: '8px', fontSize: '18px', lineHeight: 1, opacity: 0.8,
-                justifyContent: 'center', alignContent: 'center'
-              }}>
-                🇬🇧 🇺🇸 🇨🇦 🇲🇽 🇦🇺 🇪🇺 🇨🇳 🇮🇳 🇯🇵 🇰🇷 🇹🇭 🇻🇳 🇵🇭 🇮🇩 🇷🇺 🇨🇱
-              </div>
-              {/* Dark Overlay */}
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)' }} />
-              {/* Text */}
-              <span style={{ position: 'relative', fontSize: 16, fontWeight: 700, color: '#FFF', zIndex: 1 }}>
-                Язык
-              </span>
-            </button>
-
-            {/* Icon Buttons Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, height: '100%', alignItems: 'center' }}>
-              <button className="btn-reset flex-center" style={{
-                width: '100%',
-                aspectRatio: '1',
-                backgroundColor: '#2563EB',
-                borderRadius: '50%',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              }}>
-                <span className="icon-material" style={{ fontSize: 28, color: '#FFF' }}>light_mode</span>
-              </button>
-              <button className="btn-reset flex-center" style={{
-                width: '100%',
-                aspectRatio: '1',
-                backgroundColor: '#22C55E',
-                borderRadius: '50%',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              }}>
-                <span className="icon-material" style={{ fontSize: 28, color: '#FFF' }}>edit</span>
-              </button>
-            </div>
-          </div>
+          <button className="btn-reset flex-center" style={{
+            width: 40, height: 40, borderRadius: 20, backgroundColor: '#ECFDF5', flexShrink: 0, // Light Green BG
+            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.15)'
+          }}>
+            <span className="icon-material" style={{ fontSize: 20, color: '#10B981' }}>edit</span>
+          </button>
         </div>
       </div>
 
       {/* ─── Body ─── */}
       <div style={{
         flex: 1,
-        backgroundColor: '#F8FAFC',
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        padding: '24px 20px 100px 20px',
+        padding: '0 20px 100px 20px',
         display: 'flex',
         flexDirection: 'column',
       }}>
-        {/* Title */}
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1E293B', marginRight: 8 }}>
-            Настройки и помощь
-          </h2>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E' }} />
-        </div>
-
-        {/* Menu Items */}
+        
+        {/* Quick Actions (Theme, Language) */}
         <div style={{
           backgroundColor: '#FFF',
-          borderRadius: 24,
-          padding: '8px 20px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          borderRadius: 16,
+          padding: '4px 16px',
           marginBottom: 24,
+        }}>
+          {/* Language */}
+          <button className="btn-reset" style={{
+            display: 'flex', alignItems: 'center', width: '100%', padding: '12px 0', borderBottom: '1px solid #F1F5F9'
+          }}>
+            <div className="flex-center" style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#ECFDF5', marginRight: 12 }}>
+               <span style={{ fontSize: 16 }}>🇷🇺</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 16, fontWeight: 500, color: '#0F172A' }}>Язык</span>
+            <span style={{ fontSize: 15, color: '#64748B', marginRight: 4 }}>Русский</span>
+            <span className="icon-material" style={{ fontSize: 20, color: '#CBD5E1' }}>chevron_right</span>
+          </button>
+
+          {/* Theme */}
+          <button className="btn-reset" style={{
+            display: 'flex', alignItems: 'center', width: '100%', padding: '12px 0'
+          }}>
+            <div className="flex-center" style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#ECFDF5', marginRight: 12 }}>
+               <span className="icon-material" style={{ fontSize: 18, color: '#10B981' }}>light_mode</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 16, fontWeight: 500, color: '#0F172A' }}>Оформление</span>
+            <span style={{ fontSize: 15, color: '#64748B', marginRight: 4 }}>Светлое</span>
+            <span className="icon-material" style={{ fontSize: 20, color: '#CBD5E1' }}>chevron_right</span>
+          </button>
+        </div>
+
+        {/* Menu Items - iOS Style List */}
+        <div style={{
+          backgroundColor: '#FFF',
+          borderRadius: 16,
+          padding: '4px 16px',
+          marginBottom: 32,
         }}>
           {MENU_ITEMS.map((item, index) => (
             <button
               key={item.label}
+              onClick={() => {
+                if (item.label === 'О кофейне') {
+                  setIsAboutCafeOpen(true);
+                }
+              }}
               className="btn-reset"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 width: '100%',
-                padding: '16px 0',
+                padding: '12px 0',
                 borderBottom: index === MENU_ITEMS.length - 1 ? 'none' : '1px solid #F1F5F9',
               }}
             >
               <div className="flex-center" style={{
-                width: 40, height: 40, borderRadius: 12, backgroundColor: item.bg, marginRight: 16
+                width: 32, height: 32, borderRadius: 8, backgroundColor: item.bg, marginRight: 12
               }}>
-                <span className="icon-material" style={{ fontSize: 20, color: item.color }}>
+                <span className="icon-material" style={{ fontSize: 18, color: item.color, fontVariationSettings: "'FILL' 1" }}>
                   {item.icon}
                 </span>
               </div>
-              <span style={{ flex: 1, textAlign: 'left', fontSize: 16, fontWeight: 700, color: '#1E293B' }}>
+              <span style={{ flex: 1, textAlign: 'left', fontSize: 16, fontWeight: 500, color: '#0F172A' }}>
                 {item.label}
               </span>
               <span className="icon-material" style={{ fontSize: 20, color: '#CBD5E1' }}>
@@ -181,38 +153,26 @@ export default function ProfilePage() {
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
           <button className="btn-reset" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: '#DCFCE7', padding: '16px', borderRadius: 20,
+            backgroundColor: '#FFF', padding: '16px', borderRadius: 16,
+            border: '1px solid #ECFDF5'
           }}>
-            <span className="icon-material" style={{ fontSize: 20, color: '#16A34A', marginRight: 12 }}>
-              logout
-            </span>
-            <span style={{ fontSize: 16, fontWeight: 700, color: '#16A34A' }}>Выйти из аккаунта</span>
-          </button>
-          
-          <button className="btn-reset" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: '#FEE2E2', padding: '16px', borderRadius: 20,
-          }}>
-            <span className="icon-material" style={{ fontSize: 20, color: '#DC2626', marginRight: 12 }}>
-              person_remove
-            </span>
-            <span style={{ fontSize: 16, fontWeight: 700, color: '#DC2626' }}>Удалить аккаунт</span>
+            <span className="icon-material" style={{ fontSize: 20, color: '#10B981', marginRight: 8 }}>logout</span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#10B981' }}>Выйти из аккаунта</span>
           </button>
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: '#94A3B8' }}>
-            Условия использования · Конфиденциальность
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <div style={{ fontSize: 12, fontWeight: 500, color: '#CBD5E1' }}>
-            Cafe v1.0.0
+            Cafe v1.0.2
           </div>
         </div>
       </div>
+
+      {isAboutCafeOpen && <AboutCafeModal onClose={() => setIsAboutCafeOpen(false)} />}
     </div>
   );
 }
