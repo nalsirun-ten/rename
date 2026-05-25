@@ -10,7 +10,7 @@ export default function MenuCard({ item }: Props) {
   return (
     <div style={{
       padding: '12px 0',
-      margin: '0 20px',
+      margin: '0 12px',
       borderBottom: '1px solid #CBD5E1',
       display: 'flex',
       alignItems: 'stretch',
@@ -18,11 +18,12 @@ export default function MenuCard({ item }: Props) {
       {/* Left: Image */}
       <div style={{
         flexShrink: 0,
-        width: 104,
-        height: 104,
+        width: 'clamp(96px, 24.5vw, 140px)',
+        height: 'clamp(96px, 24.5vw, 140px)',
         borderRadius: 12,
         overflow: 'hidden',
         marginRight: 16,
+        backgroundColor: '#E2E8F0',
       }}>
         <img
           src={item.imageUrl}
@@ -34,6 +35,7 @@ export default function MenuCard({ item }: Props) {
       {/* Right: Content */}
       <div style={{
         flex: 1,
+        minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-start',
@@ -44,7 +46,7 @@ export default function MenuCard({ item }: Props) {
         <div style={{ paddingRight: 44 }}>
           {/* Title */}
           <h3 style={{
-            fontSize: 16,
+            fontSize: 'clamp(15px, 3.8vw, 21px)',
             fontWeight: 600,
             color: '#0F172A',
             marginBottom: 6,
@@ -56,7 +58,7 @@ export default function MenuCard({ item }: Props) {
           
           {/* Description */}
           <p style={{
-            fontSize: 13,
+            fontSize: 'clamp(12px, 3.1vw, 16px)',
             fontWeight: 400,
             color: '#64748B',
             marginBottom: 8,
@@ -71,8 +73,8 @@ export default function MenuCard({ item }: Props) {
         </div>
 
         {/* Price */}
-        <div style={{ fontSize: 16, fontWeight: 600, color: '#0F172A', marginTop: 2 }}>
-          {item.price} <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B', letterSpacing: 0.5 }}>сом</span>
+        <div style={{ fontSize: 'clamp(15px, 3.8vw, 20px)', fontWeight: 600, color: '#0F172A', marginTop: 2 }}>
+          {item.price} <span style={{ fontSize: 'clamp(11px, 2.8vw, 14px)', fontWeight: 700, color: '#64748B', letterSpacing: 0.5 }}>сом</span>
         </div>
 
         {/* Favorite Button (Absolute Top Right of the right container) */}
@@ -84,8 +86,8 @@ export default function MenuCard({ item }: Props) {
             position: 'absolute',
             top: 0,
             right: 0,
-            width: 36,
-            height: 36,
+            width: 'clamp(34px, 8.7vw, 48px)',
+            height: 'clamp(34px, 8.7vw, 48px)',
             borderRadius: 12,
             border: item.isFavorite ? '1.5px solid #EF4444' : '1.5px solid transparent',
             backgroundColor: item.isFavorite ? '#FEF2F2' : '#EFF6FF',
@@ -94,7 +96,7 @@ export default function MenuCard({ item }: Props) {
         >
           <span style={{
             fontFamily: "'Material Icons Round'",
-            fontSize: 20,
+            fontSize: 'clamp(19px, 4.8vw, 26px)',
             color: item.isFavorite ? '#EF4444' : '#3B82F6'
           }}>
             {item.isFavorite ? 'favorite' : 'favorite_border'}

@@ -11,7 +11,7 @@ export default function ReviewsBanner({ onTap }: Props) {
     <div style={{ padding: '0 16px' }}>
       <h3
         style={{
-          fontSize: 22,
+          fontSize: 'clamp(16px, 4.5vw, 22px)',
           fontWeight: 800,
           letterSpacing: -0.5,
           color: '#000',
@@ -26,29 +26,38 @@ export default function ReviewsBanner({ onTap }: Props) {
         onClick={onTap}
         style={{
           width: '100%',
-          padding: '28px 20px',
+          height: 'calc((min(100vw, 430px) - 56px) / 3)', // perfectly matches ActionCard height
+          position: 'relative',
           background: 'linear-gradient(to bottom right, #6A11CB, #2575FC)',
           borderRadius: 36,
           border: '1.5px solid #4A0C9B',
           boxShadow: '0 4px 12px rgba(106, 17, 203, 0.25)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
           textAlign: 'left',
+          overflow: 'hidden',
         }}
       >
-        {/* Icon image — natural aspect ratio, height matches button padding */}
-        <img
-          src={review3dImg}
-          alt="Отзывы"
-          style={{ height: 56, width: 'auto', flexShrink: 0, objectFit: 'contain' }}
-        />
 
-        {/* Text column */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Content absolute overlay */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 16px',
+          gap: 14,
+        }}>
+          {/* Icon image — height is 50% of the container's dynamic height */}
+          <img
+            src={review3dImg}
+            alt="Отзывы"
+            style={{ height: '50%', width: 'auto', flexShrink: 0, objectFit: 'contain' }}
+          />
+  
+          {/* Text column */}
+          <div style={{ flex: 1, minWidth: 0 }}>
           <span
             style={{
-              fontSize: 17,
+              fontSize: 'clamp(17px, 4.3vw, 24px)',
               fontWeight: 800,
               color: '#FFF',
               display: 'block',
@@ -59,7 +68,7 @@ export default function ReviewsBanner({ onTap }: Props) {
           </span>
           <span
             style={{
-              fontSize: 13,
+              fontSize: 'clamp(13px, 3.3vw, 18px)',
               fontWeight: 500,
               color: 'rgba(255,255,255,0.8)',
               display: 'block',
@@ -74,7 +83,7 @@ export default function ReviewsBanner({ onTap }: Props) {
         <span
           className="icon-material"
           style={{
-            fontSize: 18,
+            fontSize: 'clamp(18px, 4.6vw, 26px)',
             color: 'rgba(255,255,255,0.7)',
             fontVariationSettings: "'FILL' 0",
             flexShrink: 0,
@@ -82,6 +91,7 @@ export default function ReviewsBanner({ onTap }: Props) {
         >
           arrow_forward_ios
         </span>
+        </div>
       </button>
     </div>
   );

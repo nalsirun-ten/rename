@@ -251,10 +251,10 @@ export default function StoryViewer() {
           pointerEvents: 'none', // let clicks pass through to media container
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+            <div style={{ width: 'clamp(32px, 8.2vw, 45px)', height: 'clamp(32px, 8.2vw, 45px)', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(16px, 4vw, 22px)' }}>
               {currentStory.category === 'promo' ? '🏷️' : '☕'}
             </div>
-            <span style={{ color: '#fff', fontWeight: 600, fontSize: 14, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 'clamp(14px, 3.6vw, 20px)', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
               {currentStory.title}
             </span>
           </div>
@@ -265,7 +265,7 @@ export default function StoryViewer() {
               background: 'none', 
               border: 'none', 
               color: '#fff', 
-              fontSize: 24, 
+              fontSize: 'clamp(24px, 6.1vw, 34px)', 
               padding: 8,
               pointerEvents: 'auto', // enable clicks for close button
             }}

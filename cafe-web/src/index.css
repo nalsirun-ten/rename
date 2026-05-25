@@ -3,17 +3,27 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+*::-webkit-scrollbar {
+  display: none;
 }
 
 html {
   overscroll-behavior: none;
   overflow: hidden;
   height: 100%;
+  position: fixed;
+  width: 100%;
 }
 
 html, body, #root {
   height: 100%;
   overflow: hidden;
+  position: fixed;
+  width: 100%;
 }
 
 body {
@@ -54,14 +64,13 @@ body {
 .overlay-base {
   position: fixed; inset: 0; z-index: 1000;
   background-color: rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
   display: flex; align-items: flex-end; justify-content: center;
 }
 
 /* Bottom sheet container */
 .sheet-base {
   width: 100%; max-width: 430px;
-  background-color: #FFFFFF;
+  background-color: #FEF9F5;
   border-top-left-radius: 32px; border-top-right-radius: 32px;
 }
 
@@ -69,7 +78,21 @@ body {
 .drag-handle { width: 40px; height: 4px; border-radius: 2px; background-color: #CBD5E1; margin: 0 auto 24px; }
 
 /* Material icon base */
-.icon-material { font-family: 'Material Symbols Rounded'; line-height: 1; display: inline-block; }
+.icon-material { 
+  font-family: 'Material Symbols Rounded'; 
+  font-weight: normal;
+  font-style: normal;
+  font-variant: normal;
+  line-height: 1; 
+  display: inline-block; 
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
 
 /* Dark circle badge */
 .badge-circle { border-radius: 50%; background-color: #2C303A; display: flex; flex-direction: column; align-items: center; justify-content: center; }

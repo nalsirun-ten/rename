@@ -71,8 +71,8 @@ export default function BottomNav() {
                 padding: '12px 14px',
                 borderRadius: 100,
                 transition: 'all 300ms cubic-bezier(0.4, 0.0, 0.2, 1)',
-                minWidth: 48,
-                minHeight: 48,
+                minWidth: 'clamp(48px, 12.3vw, 68px)',
+                minHeight: 'clamp(48px, 12.3vw, 68px)',
                 background: isActive ? '#3B82F6' : 'transparent',
                 boxShadow: isActive
                   ? '0 4px 12px rgba(59, 130, 246, 0.40)'
@@ -89,13 +89,13 @@ export default function BottomNav() {
               {/* AnimatedSize → SizedBox(width: isActive ? null : 0) → Padding(left:8) → Text */}
               <span
                 style={{
-                  fontSize: 14,
+                  fontSize: 'clamp(14px, 3.6vw, 20px)',
                   fontWeight: 700,
                   fontFamily: "'Outfit', sans-serif",
                   color: isActive ? '#FFFFFF' : 'transparent',
                   whiteSpace: 'nowrap',
                   transition: 'all 300ms cubic-bezier(0.4, 0.0, 0.2, 1)',
-                  maxWidth: isActive ? 80 : 0,
+                  maxWidth: isActive ? 'clamp(80px, 20.5vw, 120px)' : 0,
                   opacity: isActive ? 1 : 0,
                   overflow: 'hidden',
                   paddingLeft: isActive ? 0 : 0,

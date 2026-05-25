@@ -48,12 +48,12 @@ export default function LoyaltyCard() {
               textAlign: 'left', cursor: 'pointer', width: '100%'
             }}
           >
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(0,0,0,0.87)' }}>Ваш баланс</span>
+            <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 600, color: 'rgba(0,0,0,0.87)' }}>Ваш баланс</span>
             <div style={{ height: 2 }} />
             <div style={{ display: 'flex', alignItems: 'baseline' }}>
-              <span style={{ fontSize: 36, fontWeight: 500, color: '#000', lineHeight: 1.1 }}>{points}</span>
+              <span style={{ fontSize: 'clamp(36px, 9.2vw, 50px)', fontWeight: 500, color: '#000', lineHeight: 1.1 }}>{points}</span>
               <div style={{ width: 4 }} />
-              <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(0,0,0,0.87)' }}>баллов</span>
+              <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 500, color: 'rgba(0,0,0,0.87)' }}>баллов</span>
             </div>
           </button>
 
@@ -73,10 +73,10 @@ export default function LoyaltyCard() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
-                <span style={{ fontSize: 22, fontWeight: 600, color: '#FFF', lineHeight: 1 }}>{visits}</span>
-                {nextTier && <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{' / '}{nextTier.min}</span>}
+                <span style={{ fontSize: 'clamp(22px, 5.6vw, 32px)', fontWeight: 600, color: '#FFF', lineHeight: 1 }}>{visits}</span>
+                {nextTier && <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{' / '}{nextTier.min}</span>}
               </div>
-              {nextTier && <span style={{ fontSize: 14, fontWeight: 600, color: '#FFF', paddingLeft: 8 }}>-{remaining}</span>}
+              {nextTier && <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 600, color: '#FFF', paddingLeft: 8 }}>-{remaining}</span>}
             </div>
             
             <div style={{ height: 6, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}>
@@ -84,8 +84,8 @@ export default function LoyaltyCard() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#FFF', flex: 1 }}>{currentTier.name}</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#FFF' }}>{currentTier.cb}%</span>
+              <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 800, color: '#FFF', flex: 1 }}>{currentTier.name}</span>
+              <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 800, color: '#FFF' }}>{currentTier.cb}%</span>
             </div>
           </button>
         </div>

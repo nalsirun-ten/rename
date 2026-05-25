@@ -20,6 +20,10 @@ export default function BranchesPage() {
       return false;
     }
     return true;
+  }).sort((a, b) => {
+    if (a.isSaved && !b.isSaved) return -1;
+    if (!a.isSaved && b.isSaved) return 1;
+    return 0;
   });
 
   return (
@@ -27,8 +31,10 @@ export default function BranchesPage() {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
+      width: '100%',
       backgroundColor: '#1B5E3D',
       overflowY: 'auto',
+      overflowX: 'hidden',
       WebkitOverflowScrolling: 'touch',
     }}>
       {/* ─── Header ─── */}
@@ -42,13 +48,13 @@ export default function BranchesPage() {
       }}>
         {/* Title */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-          <span style={{ fontSize: 20, fontWeight: 700, color: '#FFF' }}>
+          <span style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', fontWeight: 700, color: '#FFF' }}>
             Филиалы
           </span>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
+        <div style={{ display: 'flex', margin: '0 12px', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
           <button
             className="btn-reset"
             onClick={() => setActiveTab('Списком')}
@@ -57,7 +63,7 @@ export default function BranchesPage() {
               paddingBottom: 10,
               borderBottom: activeTab === 'Списком' ? '3px solid #FFF' : '3px solid transparent',
               color: activeTab === 'Списком' ? '#FFF' : 'rgba(255,255,255,0.7)',
-              fontSize: 15,
+              fontSize: 'clamp(15px, 3.8vw, 21px)',
               fontWeight: 700,
               textAlign: 'center',
               transition: 'all 0.2s',
@@ -73,7 +79,7 @@ export default function BranchesPage() {
               paddingBottom: 10,
               borderBottom: activeTab === 'Карта' ? '3px solid #FFF' : '3px solid transparent',
               color: activeTab === 'Карта' ? '#FFF' : 'rgba(255,255,255,0.7)',
-              fontSize: 15,
+              fontSize: 'clamp(15px, 3.8vw, 21px)',
               fontWeight: 700,
               textAlign: 'center',
               transition: 'all 0.2s',
@@ -87,7 +93,7 @@ export default function BranchesPage() {
       {/* ─── Body ─── */}
       <div style={{
         flex: 1,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#FEF9F5',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
@@ -96,8 +102,8 @@ export default function BranchesPage() {
         {activeTab === 'Списком' ? (
           <>
             {/* Title & Dot */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '20px 20px 16px 20px' }}>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1E293B', marginRight: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '20px 12px 16px 12px' }}>
+              <h2 style={{ fontSize: 'clamp(18px, 4.8vw, 24px)', fontWeight: 800, color: '#1E293B', marginRight: 8 }}>
                 Наши филиалы
               </h2>
               <div style={{ 
@@ -110,20 +116,21 @@ export default function BranchesPage() {
             </div>
 
             {/* Search Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0 20px', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', marginBottom: 16 }}>
               <div style={{
                 flex: 1,
+                minWidth: 0,
                 display: 'flex',
                 alignItems: 'center',
                 backgroundColor: '#FFFFFF',
                 borderRadius: 24,
-                padding: '0 16px',
+                padding: '0 12px',
                 height: 48,
                 border: '1.5px solid #94A3B8',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
                 marginRight: 12,
               }}>
-                <span className="icon-material" style={{ fontSize: 22, color: '#000000', marginRight: 10 }}>
+                <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6vw, 32px)', color: '#000000', marginRight: 10 }}>
                   search
                 </span>
                 <input
@@ -134,10 +141,11 @@ export default function BranchesPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     flex: 1,
+                    minWidth: 0,
                     border: 'none',
                     outline: 'none',
                     backgroundColor: 'transparent',
-                    fontSize: 16,
+                    fontSize: 'clamp(16px, 4vw, 22px)',
                     fontWeight: 500,
                     color: '#000000',
                   }}
@@ -153,7 +161,7 @@ export default function BranchesPage() {
                   flexShrink: 0,
                 }}
               >
-                <span className="icon-material" style={{ fontSize: 24, color: '#FFF' }}>
+                <span className="icon-material" style={{ fontSize: 'clamp(24px, 6.1vw, 34px)', color: '#FFF' }}>
                   search
                 </span>
               </button>
@@ -162,7 +170,7 @@ export default function BranchesPage() {
             {/* Filters */}
             <div style={{
               display: 'flex',
-              padding: '0 20px',
+              padding: '0 12px',
               overflowX: 'auto',
               marginBottom: 16,
               scrollbarWidth: 'none',
@@ -177,11 +185,11 @@ export default function BranchesPage() {
                     className="btn-reset"
                     onClick={() => setFilter(f)}
                     style={{
-                      padding: '10px 20px',
-                      borderRadius: 20,
+                      padding: '9px 18px',
+                      borderRadius: 18,
                       backgroundColor: isActive ? '#1B5E3D' : '#F1F5F9',
                       color: isActive ? '#FFF' : '#64748B',
-                      fontSize: 14,
+                      fontSize: 'clamp(13px, 3.3vw, 18px)',
                       fontWeight: 600,
                       marginRight: 10,
                       whiteSpace: 'nowrap',
@@ -201,19 +209,19 @@ export default function BranchesPage() {
                   <BranchCard key={branch.id} branch={branch} />
                 ))
               ) : (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94A3B8' }}>
-                  <span className="icon-material" style={{ fontSize: 48, marginBottom: 12 }}>
+                <div style={{ textAlign: 'center', padding: '40px 12px', color: '#94A3B8' }}>
+                  <span className="icon-material" style={{ fontSize: 'clamp(48px, 12.3vw, 68px)', marginBottom: 12 }}>
                     search_off
                   </span>
-                  <p style={{ fontSize: 16, fontWeight: 500 }}>Ничего не найдено</p>
+                  <p style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 500 }}>Ничего не найдено</p>
                 </div>
               )}
             </div>
           </>
         ) : (
-          <div className="flex-center" style={{ flex: 1, padding: 40, flexDirection: 'column', color: '#94A3B8' }}>
-             <span className="icon-material" style={{ fontSize: 48, marginBottom: 16 }}>map</span>
-             <p style={{ fontSize: 16, fontWeight: 600 }}>Карта в разработке</p>
+          <div className="flex-center" style={{ flex: 1, padding: '40px 12px', flexDirection: 'column', color: '#94A3B8' }}>
+             <span className="icon-material" style={{ fontSize: 'clamp(48px, 12.3vw, 68px)', marginBottom: 16 }}>map</span>
+             <p style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 600 }}>Карта в разработке</p>
           </div>
         )}
       </div>

@@ -116,7 +116,7 @@ function NewsCard({
               <span
                 className="icon-material"
                 style={{
-                  fontSize: 40,
+                  fontSize: 'clamp(40px, 10.2vw, 56px)',
                   color: 'rgba(255,255,255,0.32)',
                   fontVariationSettings: "'FILL' 1",
                 }}
@@ -141,8 +141,8 @@ function NewsCard({
         <div
           style={{
             position: 'absolute',
-            left: 20,
-            right: 20,
+            left: 16,
+            right: 16,
             bottom: 20,
             display: 'flex',
             flexDirection: 'column',
@@ -156,7 +156,7 @@ function NewsCard({
               padding: '3px 8px',
               borderRadius: 8,
               backgroundColor: '#185D93',
-              fontSize: 10,
+              fontSize: 'clamp(10px, 2.5vw, 14px)',
               fontWeight: 700,
               color: '#FFF',
               letterSpacing: 0.5,
@@ -170,7 +170,7 @@ function NewsCard({
           {/* Title — max 2 lines */}
           <span
             style={{
-              fontSize: 15,
+              fontSize: 'clamp(15px, 3.8vw, 21px)',
               fontWeight: 700,
               color: '#FFF',
               lineHeight: 1.3,
@@ -190,7 +190,7 @@ function NewsCard({
           {contentPreview && (
             <span
               style={{
-                fontSize: 11,
+                fontSize: 'clamp(11px, 2.8vw, 15px)',
                 fontWeight: 400,
                 color: 'rgba(255,255,255,0.7)',
                 lineHeight: 1.3,
@@ -267,10 +267,10 @@ function NewsCard({
             boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
           }}
         >
-          <span style={{ color: '#FFF', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>
+          <span style={{ color: '#FFF', fontSize: 'clamp(16px, 4.1vw, 22px)', fontWeight: 700, lineHeight: 1 }}>
             {day}
           </span>
-          <span style={{ color: '#94A3B8', fontSize: 10, fontWeight: 700, lineHeight: 1, marginTop: 2, letterSpacing: 0.5 }}>
+          <span style={{ color: '#94A3B8', fontSize: 'clamp(10px, 2.5vw, 14px)', fontWeight: 700, lineHeight: 1, marginTop: 2, letterSpacing: 0.5 }}>
             {month}
           </span>
         </div>
@@ -381,7 +381,7 @@ export default function NewsSection() {
         {/* ── Section title ── */}
         <h3
           style={{
-            fontSize: 22,
+            fontSize: 'clamp(16px, 4.5vw, 22px)',
             fontWeight: 800,
             letterSpacing: -0.5,
             color: '#000',

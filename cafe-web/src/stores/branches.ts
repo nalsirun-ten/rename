@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import restoranImage from '@assets/images/restoran-komanda.jpg';
-import coffee3dImage from '@assets/images/coffee_cup_3d.png';
+import { persist } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
 
 export type BranchType = 'Кофейня' | 'Точка на вынос';
 export type FilterType = 'Все' | BranchType;
@@ -18,55 +18,10 @@ export interface Branch {
   isSaved: boolean;
 }
 
-const MOCK_BRANCHES: Branch[] = [
-  {
-    id: '1',
-    title: 'Центральный филиал',
-    address: 'Бишкек, пр. Чуй 125',
-    openTime: '08:00',
-    closeTime: '22:00',
-    type: 'Кофейня',
-    imageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400',
-    isOpen: true,
-    isSaved: false,
-  },
-  {
-    id: '2',
-    title: 'Парк Ататюрк',
-    address: 'Бишкек, ул. Ахунбаева 92',
-    openTime: '09:00',
-    closeTime: '23:00',
-    type: 'Кофейня',
-    imageUrl: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=600&h=400',
-    isOpen: true,
-    isSaved: false,
-  },
-  {
-    id: '3',
-    title: 'Дордой Плаза',
-    address: 'Бишкек, ул. Ибраимова 115 (ТЦ Dordoi Plaza, 1 этаж)',
-    openTime: '10:00',
-    closeTime: '22:00',
-    type: 'Точка на вынос',
-    imageUrl: 'https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=600&h=400',
-    isOpen: true,
-    isSaved: false,
-  },
-  {
-    id: '4',
-    title: 'Южные Ворота',
-    address: 'Бишкек, ул. Токомбаева 23/1',
-    openTime: '08:00',
-    closeTime: '23:00',
-    type: 'Кофейня',
-    imageUrl: 'https://images.unsplash.com/photo-1453614512568-c4024d13c247?auto=format&fit=crop&w=600&h=400',
-    isOpen: true,
-    isSaved: false,
-  },
-];
-
+// MOCK_BRANCHES removed, using Supabase
 interface BranchesState {
   branches: Branch[];
+  savedBranchIds: Record<string, boolean>;
   searchQuery: string;
   filter: FilterType;
   activeTab: TabType;
@@ -77,23 +32,71 @@ interface BranchesState {
   openBranch: (id: string) => void;
   closeBranch: () => void;
   toggleSaved: (id: string) => void;
+  fetchBranches: () => Promise<void>;
 }
 
-export const useBranchesStore = create<BranchesState>((set) => ({
-  branches: MOCK_BRANCHES,
-  searchQuery: '',
-  filter: 'Все',
-  activeTab: 'Списком',
-  activeBranchId: null,
+export const useBranchesStore = create<BranchesState>()(
+  persist(
+    (set, get) => ({
+      branches: [],
+      savedBranchIds: {},
+      searchQuery: '',
+      filter: 'Все',
+      activeTab: 'Списком',
+      activeBranchId: null,
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setFilter: (filter: FilterType) => set({ filter }),
   setActiveTab: (tab: TabType) => set({ activeTab: tab }),
   openBranch: (id: string) => set({ activeBranchId: id }),
   closeBranch: () => set({ activeBranchId: null }),
-  toggleSaved: (id: string) =>
+  toggleSaved: (id: string) => {
+    const currentSaved = !!get().savedBranchIds[id];
+    const nextSavedBranchIds = { ...get().savedBranchIds };
+    if (currentSaved) {
+      delete nextSavedBranchIds[id];
+    } else {
+      nextSavedBranchIds[id] = true;
+    }
     set((state) => ({
+      savedBranchIds: nextSavedBranchIds,
       branches: state.branches.map((b) =>
-        b.id === id ? { ...b, isSaved: !b.isSaved } : b
+        b.id === id ? { ...b, isSaved: !currentSaved } : b
       ),
-    })),
-}));
+    }));
+  },
+  fetchBranches: async () => {
+    const { data, error } = await supabase.from('branches').select('*');
+    if (data && !error) {
+      set({
+        branches: data.map((b) => {
+          // Parse working_hours (e.g. "08:00 - 22:00" or similar)
+          let openTime = '08:00';
+          let closeTime = '22:00';
+          if (b.working_hours && b.working_hours.includes('-')) {
+            const parts = b.working_hours.split('-');
+            openTime = parts[0].trim();
+            closeTime = parts[1].trim();
+          }
+
+          return {
+            id: b.id,
+            title: b.name,
+            address: b.address,
+            openTime,
+            closeTime,
+            type: (b.type === 'takeaway' || b.type === 'Точка на вынос') ? 'Точка на вынос' : 'Кофейня',
+            imageUrl: b.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400',
+            isOpen: b.is_active !== false,
+            isSaved: !!get().savedBranchIds[b.id],
+          };
+        })
+      });
+    }
+  },
+    }),
+    {
+      name: 'cafe-branches-storage',
+      partialize: (state) => ({ savedBranchIds: state.savedBranchIds }),
+    }
+  )
+);

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface Story {
   id: string;
@@ -18,31 +19,59 @@ export const CAT_CFG: Record<Story['category'], { name: string; icon: string; co
   vip:     { name: 'VIP',     icon: '⭐', colors: ['#C5CAE9', '#9FA8DA'] },
 };
 
-const MOCK_STORIES: Story[] = [
-  { id: '1', title: 'Новое латте', category: 'service', imageUrl: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=400&h=700' },
-  { id: '2', title: 'Скидка 20%', category: 'promo', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', imageUrl: 'https://images.unsplash.com/photo-1481833761820-0509d32170b4?auto=format&fit=crop&w=400&h=700' },
-  { id: '3', title: 'Круассаны', category: 'menu', imageUrl: 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?auto=format&fit=crop&w=400&h=700' },
-  { id: '4', title: 'Новый филиал', category: 'places', imageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&h=700' },
-  { id: '5', title: 'VIP-карта', category: 'vip', imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=400&h=700' },
-];
-
+import { supabase } from '../lib/supabase';
 interface StoriesState {
   stories: Story[];
   isLoading: boolean;
-  seenStories: Set<string>;
+  seenStories: Record<string, boolean>;
   activeStoryId: string | null;
   markAsSeen: (id: string) => void;
   openStory: (id: string) => void;
   closeStory: () => void;
+  fetchStories: () => Promise<void>;
 }
 
-export const useStoriesStore = create<StoriesState>((set) => ({
-  stories: MOCK_STORIES,
-  isLoading: false,
-  seenStories: new Set<string>(),
-  activeStoryId: null,
-  markAsSeen: (id: string) =>
-    set((state) => ({ seenStories: new Set([...state.seenStories, id]) })),
-  openStory: (id: string) => set({ activeStoryId: id }),
-  closeStory: () => set({ activeStoryId: null }),
-}));
+export const useStoriesStore = create<StoriesState>()(
+  persist(
+    (set) => ({
+      stories: [],
+      isLoading: false,
+      seenStories: {},
+      activeStoryId: null,
+      markAsSeen: (id: string) =>
+        set((state) => ({ seenStories: { ...state.seenStories, [id]: true } })),
+      openStory: (id: string) => set({ activeStoryId: id }),
+      closeStory: () => set({ activeStoryId: null }),
+  fetchStories: async () => {
+    set({ isLoading: true });
+    try {
+      const { data, error } = await supabase
+        .from('stories')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      const formatted = (data || []).map((s) => ({
+        id: s.id,
+        title: s.title,
+        category: s.category as any,
+        imageUrl: s.image_url,
+        videoUrl: s.video_url,
+        description: s.description,
+        createdAt: s.created_at,
+      }));
+      set({ stories: formatted });
+    } catch (error) {
+      console.error('Error fetching stories:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+    }),
+    {
+      name: 'cafe-stories-storage',
+      partialize: (state) => ({ seenStories: state.seenStories }),
+    }
+  )
+);

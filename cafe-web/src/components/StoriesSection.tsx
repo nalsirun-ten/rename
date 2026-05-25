@@ -25,17 +25,17 @@ const scrollStyle: React.CSSProperties = {
 function StoriesSkeleton() {
   const items = Array.from({ length: 5 }, (_, i) => (
     <div key={i} style={{ marginRight: 14, flexShrink: 0 }}>
-      {/* Circle placeholder — 94×94 */}
+      {/* Circle placeholder */}
       <div style={{
-        width: 94, height: 94, borderRadius: '50%',
+        width: 'clamp(76px, 19.5vw, 100px)', height: 'clamp(76px, 19.5vw, 100px)', borderRadius: '50%',
         backgroundColor: '#E2E8F0',
         animation: 'stories-pulse 1200ms ease-in-out infinite',
       }} />
       {/* Gap: SizedBox(height:8) */}
       <div style={{ height: 8 }} />
-      {/* Text placeholder — 60×13, rounded 4px */}
+      {/* Text placeholder */}
       <div style={{
-        width: 60, height: 13, borderRadius: 4,
+        width: 'calc(clamp(76px, 19.5vw, 100px) - 16px)', height: 13, borderRadius: 4,
         backgroundColor: '#E2E8F0',
         animation: 'stories-pulse 1200ms ease-in-out infinite',
       }} />
@@ -74,9 +74,9 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
         flexShrink: 0,
       }}
     >
-      {/* ── Outer ring: Container(94×94, padding:3, circle) ── */}
+      {/* ── Outer ring ── */}
       <div style={{
-        width: 94, height: 94, padding: 3, borderRadius: '50%',
+        width: 'clamp(76px, 19.5vw, 100px)', height: 'clamp(76px, 19.5vw, 100px)', padding: 2.5, borderRadius: '50%',
         background: outerBg,
       }}>
         {/* ── Inner border: Container(border:2.5px white, circle) ── */}
@@ -96,7 +96,6 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
                 src={story.imageUrl}
                 alt={story.title}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                loading="lazy"
                 onError={(e) => {
                   // Flutter: errorWidget → show emoji
                   const target = e.currentTarget;
@@ -108,7 +107,7 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
             ) : null}
             {/* Emoji fallback — always rendered, hidden if image loads successfully */}
             <span style={{
-              fontSize: 25,
+              fontSize: 'clamp(25px, 6.4vw, 32px)',
               lineHeight: 1,
               display: hasImage ? 'none' : 'flex',
               alignItems: 'center',
@@ -125,10 +124,10 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
       {/* ── Gap: SizedBox(height:8) ── */}
       <div style={{ height: 8 }} />
 
-      {/* ── Label: SizedBox(width:94) → Text(13, w600, white/0.9, letterSpacing:-0.2) ── */}
+      {/* ── Label ── */}
       <span style={{
-        width: 94,
-        fontSize: 13,
+        width: 'clamp(76px, 19.5vw, 100px)',
+        fontSize: 'clamp(12px, 3.1vw, 15px)',
         fontWeight: 600,
         color: 'rgba(255,255,255,0.9)',
         letterSpacing: -0.2,
@@ -149,15 +148,15 @@ export default function StoriesSection() {
   const { stories, isLoading, seenStories, markAsSeen, openStory } = useStoriesStore();
 
   // Sort: unseen first, seen last (Instagram-style)
-  const sorted = [...stories].sort((a, b) => {
-    const aSeen = seenStories.has(a.id) ? 1 : 0;
-    const bSeen = seenStories.has(b.id) ? 1 : 0;
+  const sortedStories = [...stories].sort((a, b) => {
+    const aSeen = seenStories[a.id] ? 1 : 0;
+    const bSeen = seenStories[b.id] ? 1 : 0;
     return aSeen - bSeen;
   });
 
   return (
     <div style={sectionStyle}>
-      <div style={{ height: 125 }}>
+      <div style={{ height: 'calc(clamp(76px, 19.5vw, 100px) + 34px)' }}>
         {isLoading ? (
           <StoriesSkeleton />
         ) : stories.length === 0 ? (
@@ -172,11 +171,11 @@ export default function StoriesSection() {
             className="stories-scroll"
             style={scrollStyle}
           >
-            {sorted.map((story, index) => (
+            {sortedStories.map((story, index) => (
               <StoryItem
                 key={story.id || String(index)}
                 story={story}
-                isSeen={seenStories.has(story.id)}
+                isSeen={!!seenStories[story.id]}
                 onTap={() => {
                   markAsSeen(story.id);
                   openStory(story.id);

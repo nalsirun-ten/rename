@@ -44,7 +44,7 @@ function StampItem({
             borderRadius: '50%'
           }}>
             <span className="icon-material" style={{ 
-              fontSize: 38, 
+              fontSize: 'clamp(38px, 9.7vw, 52px)', 
               color: '#34D399', 
               fontWeight: 900,
               textShadow: '0 2px 8px rgba(0,0,0,0.4)'
@@ -53,7 +53,7 @@ function StampItem({
             </span>
           </div>
         </div>
-        <span style={{ fontSize: 10, fontWeight: 800, color: '#FFF', lineHeight: 1, marginTop: 3 }}>
+        <span style={{ fontSize: 'clamp(10px, 2.5vw, 14px)', fontWeight: 800, color: '#FFF', lineHeight: 1, marginTop: 3 }}>
           {index + 1}
         </span>
       </div>
@@ -82,7 +82,7 @@ function StampItem({
             <img src={assetPath} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain', opacity: 1 }} />
           </div>
         </div>
-        <span style={{ fontSize: 10, fontWeight: 800, color: '#FFF', lineHeight: 1, marginTop: 3 }}>
+        <span style={{ fontSize: 'clamp(10px, 2.5vw, 14px)', fontWeight: 800, color: '#FFF', lineHeight: 1, marginTop: 3 }}>
           {index + 1}
         </span>
       </div>
@@ -101,7 +101,7 @@ function StampItem({
           <img src={assetPath} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain', opacity: 1 }} />
         </div>
       </div>
-      <span style={{ fontSize: 10, fontWeight: 800, color: '#FFF', lineHeight: 1, marginTop: 3 }}>
+      <span style={{ fontSize: 'clamp(10px, 2.5vw, 14px)', fontWeight: 800, color: '#FFF', lineHeight: 1, marginTop: 3 }}>
         {index + 1}
       </span>
     </div>
@@ -135,9 +135,9 @@ function StampsInfoModal({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <div className="overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
-      <div className="sheet-base flex-col" style={{ padding: 24, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)', overflowY: 'auto' }}>
-        <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1E293B', marginBottom: 8 }}>Как это работает</h3>
-        <p style={{ fontSize: 14, fontWeight: 500, color: '#64748B', lineHeight: 1.6, marginBottom: 20 }}>
+      <div className="sheet-base flex-col" style={{ padding: '24px 16px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)', overflowY: 'auto' }}>
+        <h3 style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', fontWeight: 800, color: '#1E293B', marginBottom: 8 }}>Как это работает</h3>
+        <p style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 500, color: '#64748B', lineHeight: 1.6, marginBottom: 20 }}>
           Мы ценим каждого гостя! Совершайте покупки и получайте любимый кофе в подарок.
         </p>
         {INFO_RULES.map((rule, i) => (
@@ -146,17 +146,17 @@ function StampsInfoModal({ onClose }: { onClose: () => void }) {
               width: 28, height: 28, borderRadius: '50%', backgroundColor: '#F97316',
               flexShrink: 0, marginTop: 2,
             }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#FFF' }}>{i + 1}</span>
+              <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 800, color: '#FFF' }}>{i + 1}</span>
             </div>
             <div style={{ width: 12, flexShrink: 0 }} />
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#1E293B', lineHeight: 1.45, flex: 1 }}>
+            <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 500, color: '#1E293B', lineHeight: 1.45, flex: 1 }}>
               {rule}
             </span>
           </div>
         ))}
         <button className="btn-reset" onClick={onClose} style={{
           marginTop: 24, width: '100%', padding: '14px 0', borderRadius: 16,
-          backgroundColor: '#1B5E3D', color: '#FFF', fontSize: 16, fontWeight: 700,
+          backgroundColor: '#1B5E3D', color: '#FFF', fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 700,
         }}>
           Понятно
         </button>
@@ -179,9 +179,10 @@ export default function StampsProgress() {
       {/* ── Flutter: Padding(bottom:16) → Column ── */}
       <div style={{ paddingBottom: 16 }}>
         {/* ── Title: Padding(horizontal:20) → Text fontSize:19 w800 ── */}
-        <div style={{ padding: '0 20px' }}>
+        <div style={{ padding: '0 16px' }}>
           <h3 style={{
-            fontSize: 22, fontWeight: 800, letterSpacing: -0.5,
+            fontSize: 'clamp(16px, 4.5vw, 22px)',
+            fontWeight: 800,
             color: '#000', marginBottom: 12,
           }}>
             Кофе за наш счёт
@@ -194,7 +195,7 @@ export default function StampsProgress() {
             className="btn-reset"
             onClick={() => setShowInfo(true)}
             style={{
-              position: 'relative', width: '100%', height: 264,
+              position: 'relative', width: '100%', height: 'clamp(264px, 67.6vw, 360px)',
               textAlign: 'left', overflow: 'visible',
             }}
           >
@@ -210,7 +211,7 @@ export default function StampsProgress() {
             {/* Content layer — grid of stamps and progress bar */}
             <div style={{
               position: 'relative', zIndex: 1,
-              padding: '24px 20px', height: '100%',
+              padding: '24px 16px', height: '100%',
               boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
@@ -218,7 +219,7 @@ export default function StampsProgress() {
             }}>
               {/* Inner wrapper to keep progress bar and grid perfectly aligned on the sides */}
               <div style={{
-                width: '100%', maxWidth: 324,
+                width: '100%', maxWidth: 'clamp(324px, 83vw, 440px)',
                 display: 'flex', flexDirection: 'column',
                 height: '100%',
               }}>
@@ -248,10 +249,10 @@ export default function StampsProgress() {
                 {/* ── Progress Bar ── */}
                 <div style={{ width: '100%', marginTop: 'auto' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+                    <span style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
                       {isComplete ? 'Ура! Подарок ваш!' : `Собрано ${filled} из ${TOTAL}`}
                     </span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: isComplete ? '#FFD700' : '#FFF' }}>
+                    <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 800, color: isComplete ? '#FFD700' : '#FFF' }}>
                       {isComplete ? '100%' : `Осталось ${TOTAL - filled}`}
                     </span>
                   </div>

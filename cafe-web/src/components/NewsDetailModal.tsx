@@ -61,12 +61,12 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
       className="ndm-overlay overlay-base"
       onClick={handleOverlay}
     >
-      <div className="sheet-base flex-col" style={{ overflowY: 'auto', padding: 24, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}>
+      <div className="sheet-base flex-col" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
         {/* ── Header ── */}
-        <div className="flex-between" style={{ marginBottom: 20 }}>
+        <div className="flex-between" style={{ padding: '24px 16px 16px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
+            <h2 style={{ fontSize: 'clamp(22px, 5.6vw, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
               {tag || 'Новость'}
             </h2>
             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
@@ -74,11 +74,14 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
           <button 
             className="btn-reset flex-center" 
             onClick={onClose}
-            style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#F1F5F9' }}
+            style={{ width: 'clamp(36px, 9.2vw, 50px)', height: 'clamp(36px, 9.2vw, 50px)', borderRadius: '50%', backgroundColor: '#F1F5F9' }}
           >
-            <span className="icon-material" style={{ fontSize: 20, color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
           </button>
         </div>
+
+        {/* ── Scrollable Content ── */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '0 16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
 
         {/* ── Image (if available) ── */}
         {item.imageUrl ? (
@@ -96,7 +99,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
                 alt={item.title}
                 style={{
                   width: '100%',
-                  height: 200,
+                  height: 'clamp(200px, 51vw, 280px)',
                   objectFit: 'cover',
                   display: 'block',
                 }}
@@ -112,7 +115,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
                 borderRadius: 24,
                 border: '2px solid #1E293B',
                 overflow: 'hidden',
-                height: 200,
+                height: 'clamp(200px, 51vw, 280px)',
                 marginBottom: 20,
                 background: `linear-gradient(135deg, ${categoryColor}22, ${categoryColor}44)`,
               }}
@@ -120,7 +123,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
               <span
                 className="icon-material"
                 style={{
-                  fontSize: 48,
+                  fontSize: 'clamp(48px, 12.3vw, 68px)',
                   color: categoryColor,
                   fontVariationSettings: "'FILL' 1",
                   opacity: 0.4,
@@ -135,7 +138,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
         {/* ── Title ── */}
         <h2
           style={{
-            fontSize: 22,
+            fontSize: 'clamp(22px, 5.6vw, 32px)',
             fontWeight: 800,
             color: '#1E293B',
             marginBottom: 8,
@@ -148,7 +151,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
         {/* ── Date + Category tag row ── */}
         <div className="flex-between" style={{ marginBottom: 8 }}>
           {dateStr ? (
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#64748B' }}>
+            <span style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', fontWeight: 500, color: '#64748B' }}>
               {dateStr}
             </span>
           ) : (
@@ -160,7 +163,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
               padding: '4px 10px',
               borderRadius: 8,
               backgroundColor: categoryColor,
-              fontSize: 11,
+              fontSize: 'clamp(11px, 2.8vw, 15px)',
               fontWeight: 700,
               color: '#FFF',
             }}
@@ -182,7 +185,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
         {item.content && (
           <p
             style={{
-              fontSize: 15,
+              fontSize: 'clamp(15px, 3.8vw, 21px)',
               color: '#1E293B',
               lineHeight: 1.6,
               whiteSpace: 'pre-line',
@@ -194,6 +197,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
 
         {/* ── Bottom spacing ── */}
         <div style={{ height: 16 }} />
+        </div>
       </div>
     </div>,
     document.body

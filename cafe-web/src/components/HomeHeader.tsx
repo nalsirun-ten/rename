@@ -42,7 +42,7 @@ export default function HomeHeader() {
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           <span style={{
             fontFamily: "'Grand Hotel'",
-            fontSize: 30,
+            fontSize: 'clamp(30px, 7.7vw, 42px)',
             color: '#FFFFFF',
             letterSpacing: 1,
             whiteSpace: 'nowrap',
@@ -67,7 +67,7 @@ export default function HomeHeader() {
             {/* Flutter: Icons.notifications_none_rounded → U+E7F5 in Material Icons Round */}
             <span className="icon-material" style={{
               fontFamily: "'Material Icons Round'",
-              fontSize: 28,
+              fontSize: 'clamp(28px, 7.1vw, 40px)',
               color: '#FFFFFF',
             }}>
               {'\uE7F5'}

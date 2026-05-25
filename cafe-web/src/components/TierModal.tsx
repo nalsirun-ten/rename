@@ -33,13 +33,13 @@ export default function TierModal({ onClose }: Props) {
     <div className="overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
       <div 
         ref={sheetRef}
-        className="sheet-base flex-col" style={{ overflowY: 'auto', padding: 24, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}
+        className="sheet-base flex-col" style={{ overflowY: 'auto', padding: '24px 16px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}
       >
         
         {/* Header */}
         <div className="flex-between" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
+            <h2 style={{ fontSize: 'clamp(22px, 5.6vw, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
               Система лояльности
             </h2>
             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
@@ -47,14 +47,14 @@ export default function TierModal({ onClose }: Props) {
           <button 
             className="btn-reset flex-center" 
             onClick={onClose}
-            style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#F1F5F9' }}
+            style={{ width: 'clamp(36px, 9.2vw, 50px)', height: 'clamp(36px, 9.2vw, 50px)', borderRadius: '50%', backgroundColor: '#F1F5F9' }}
           >
-            <span className="icon-material" style={{ fontSize: 20, color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
           </button>
         </div>
 
         {/* Content (Timeline) */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px' }}>
           <div style={{ position: 'relative' }}>
             {/* The vertical line connecting items */}
             <div style={{
@@ -80,12 +80,12 @@ export default function TierModal({ onClose }: Props) {
                       }} />
                     )}
                     <div style={{
-                      width: 44, height: 44, borderRadius: 22,
+                      width: 'clamp(44px, 11.2vw, 62px)', height: 'clamp(44px, 11.2vw, 62px)', borderRadius: '50%',
                       backgroundColor: tier.bg,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       boxShadow: isActive ? '0 0 0 2px #10B981' : '0 2px 8px rgba(0,0,0,0.05)'
                     }}>
-                      <span className="icon-material" style={{ fontSize: 24, color: tier.color, fontVariationSettings: "'FILL' 1" }}>
+                      <span className="icon-material" style={{ fontSize: 'clamp(24px, 6.1vw, 34px)', color: tier.color, fontVariationSettings: "'FILL' 1" }}>
                         {tier.icon}
                       </span>
                     </div>
@@ -100,7 +100,7 @@ export default function TierModal({ onClose }: Props) {
                     transition: 'all 0.3s ease'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: '#1E293B' }}>
+                      <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 800, color: '#1E293B' }}>
                         {tier.name}
                       </span>
                       <div style={{
@@ -108,12 +108,12 @@ export default function TierModal({ onClose }: Props) {
                         backgroundColor: tier.color,
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                       }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: '#FFF' }}>
+                        <span style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', fontWeight: 800, color: '#FFF' }}>
                           {tier.cb}%
                         </span>
                       </div>
                     </div>
-                    <p style={{ fontSize: 13, color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+                    <p style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
                       {tier.max > 10000 
                         ? `Макс. кэшбэк ${tier.cb}% от ${tier.min} посещ.` 
                         : `Кэшбэк ${tier.cb}% при ${tier.min}-${tier.max} посещ.`}

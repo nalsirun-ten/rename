@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import QRCodeStyling from 'qr-code-styling';
 import appIcon from '@assets/icon/app_icon_circular_sm.png';
 
+const qrCanvasCache = new Map<string, HTMLCanvasElement>();
+
 interface Props {
   data: string;
   size: number;
@@ -19,6 +21,13 @@ export default function QrCode({ data, size, iconSize = 28, color = '#FFFFFF', b
     
     // Clear previous
     el.innerHTML = '';
+
+    const cacheKey = `${data}-${size}-${iconSize}-${color}-${backgroundColor}`;
+    if (qrCanvasCache.has(cacheKey)) {
+      const cached = qrCanvasCache.get(cacheKey)!;
+      el.appendChild(cached);
+      return;
+    }
 
     // Use massive internal resolution scale to fix mobile blurriness natively
     const scale = 4;
@@ -42,19 +51,24 @@ export default function QrCode({ data, size, iconSize = 28, color = '#FFFFFF', b
     setTimeout(() => {
       const canvas = el.querySelector('canvas');
       if (canvas) {
-        canvas.style.width = `${size}px`;
-        canvas.style.height = `${size}px`;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.maxWidth = `${size}px`; // max natural size
+        canvas.style.maxHeight = `${size}px`;
         canvas.style.display = 'block'; // Prevents flex baseline descender space
+        qrCanvasCache.set(cacheKey, canvas);
       }
     }, 0);
-  }, [data, size, iconSize]);
+  }, [data, size, iconSize, color, backgroundColor]);
 
   return (
     <div 
       ref={ref} 
       style={{ 
-        width: size, 
-        height: size, 
+        width: '100%', 
+        height: '100%', 
+        maxWidth: size,
+        maxHeight: size,
         flexShrink: 0, 
         display: 'flex', 
         alignItems: 'center', 

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -21,93 +22,7 @@ export interface Review {
   created_at: string;
 }
 
-// ─── Mock data ───────────────────────────────────────────────────────
-
-const MOCK_REVIEWS: Review[] = [
-  {
-    id: '1',
-    rating: 5,
-    text: 'Отличное место! Очень вкусный кофе и приятная атмосфера. Персонал вежливый и внимательный. Обязательно вернусь сюда ещё!',
-    user: { full_name: 'Айжан М.', avatar_url: undefined, id: 'user1' },
-    doctor: { full_name: 'Бариста Азамат' },
-    likes: 24,
-    created_at: '2026-05-20T10:30:00Z',
-  },
-  {
-    id: '2',
-    rating: 4,
-    text: 'Хороший кофе и уютно. Немного долго ждал заказ, но оно того стоило.',
-    guest_name: 'Айдай',
-    likes: 8,
-    created_at: '2026-05-19T15:45:00Z',
-  },
-  {
-    id: '3',
-    rating: 5,
-    text: 'Лучший латте в городе! Рекомендую всем любителям кофе. Отдельное спасибо бариста Айдане за красивый латте-арт.',
-    user: { full_name: 'Бекжан Т.', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&h=100', id: 'user2' },
-    doctor: { full_name: 'Айдана К.' },
-    likes: 17,
-    created_at: '2026-05-18T09:15:00Z',
-  },
-  {
-    id: '4',
-    rating: 3,
-    text: 'Неплохо, но ожидал большего. Цены высоковаты для такого качества.',
-    guest_name: 'Гость',
-    likes: 3,
-    created_at: '2026-05-17T12:00:00Z',
-  },
-  {
-    id: '5',
-    rating: 5,
-    text: 'Прекрасное обслуживание! Очень понравился десерт и капучино. Уютная обстановка, отличная музыка.',
-    user: { full_name: 'Дария С.', avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&h=100', id: 'user3' },
-    likes: 31,
-    created_at: '2026-05-16T14:20:00Z',
-  },
-  {
-    id: '6',
-    rating: 4,
-    text: 'Хорошая кофейня, но парковка маленькая. Кофе отличный, десерты свежие.',
-    guest_name: 'Азамат',
-    likes: 12,
-    created_at: '2026-05-15T11:00:00Z',
-  },
-  {
-    id: '7',
-    rating: 5,
-    text: 'Обожаю это место! Хожу сюда каждое утро перед работой. Бариста знают мой заказ наизусть ❤️',
-    user: { full_name: 'Карина М.', avatar_url: undefined, id: 'user4' },
-    doctor: { full_name: 'Бариста Азамат' },
-    likes: 42,
-    created_at: '2026-05-14T08:30:00Z',
-  },
-  {
-    id: '8',
-    rating: 2,
-    text: 'Долго ждал заказ, кофе был холодный. Надеюсь исправитесь.',
-    guest_name: 'Нурсултан',
-    likes: 1,
-    created_at: '2026-05-12T16:10:00Z',
-  },
-  {
-    id: '9',
-    rating: 5,
-    text: 'Уютная кофейня с отличным кофе и вкусными круассанами. Идеальное место для работы с ноутбуком.',
-    user: { full_name: 'Эрмек Ж.', avatar_url: undefined, id: 'user5' },
-    likes: 19,
-    created_at: '2026-05-10T13:45:00Z',
-  },
-  {
-    id: '10',
-    rating: 4,
-    text: 'Приятное место, хороший выбор напитков. Добавьте больше веганских опций пожалуйста!',
-    guest_name: 'Алия',
-    likes: 6,
-    created_at: '2026-05-08T10:00:00Z',
-  },
-];
+import { supabase } from '../lib/supabase';
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -160,23 +75,114 @@ export function getPluralForm(n: number): string {
 
 interface ReviewsState {
   reviews: Review[];
-  likedReviews: Set<string>;
-  toggleLike: (reviewId: string) => void;
+  likedReviews: Record<string, boolean>;
+  isLoading: boolean;
+  toggleLike: (reviewId: string, userId?: string) => Promise<void>;
   isLiked: (reviewId: string) => boolean;
+  fetchReviews: () => Promise<void>;
+  fetchLikedReviews: (userId: string) => Promise<void>;
 }
 
-export const useReviewsStore = create<ReviewsState>((set, get) => ({
-  reviews: MOCK_REVIEWS,
-  likedReviews: new Set(['1', '5']),
-  toggleLike: (reviewId: string) =>
-    set((state) => {
-      const next = new Set(state.likedReviews);
-      if (next.has(reviewId)) {
-        next.delete(reviewId);
-      } else {
-        next.add(reviewId);
+export const useReviewsStore = create<ReviewsState>()(
+  persist(
+    (set, get) => ({
+      reviews: [],
+      likedReviews: {},
+      isLoading: false,
+
+  fetchReviews: async () => {
+    set({ isLoading: true });
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*, user:profiles!reviews_user_id_fkey(id, full_name, avatar_url), doctor:baristas!reviews_barista_id_fkey(full_name)')
+        .order('likes', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      const formatted = (data || []).map((r: any) => ({
+        id: r.id,
+        rating: r.rating,
+        text: r.text,
+        guest_name: r.guest_name,
+        guest_avatar: r.guest_avatar,
+        user: r.user,
+        doctor: r.doctor,
+        images: r.images,
+        likes: r.likes || 0,
+        created_at: r.created_at,
+      }));
+      set({ reviews: formatted });
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchLikedReviews: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('review_likes')
+        .select('review_id')
+        .eq('user_id', userId);
+        
+      if (error) throw error;
+      
+      const likedMap: Record<string, boolean> = {};
+      data?.forEach(row => { likedMap[row.review_id] = true; });
+      set({ likedReviews: likedMap });
+    } catch (error) {
+      console.error('Error fetching liked reviews:', error);
+    }
+  },
+
+  toggleLike: async (reviewId: string, userId?: string) => {
+    const state = get();
+    const isLiked = !!state.likedReviews[reviewId];
+    
+    // Optimistic UI update
+    const nextMap = { ...state.likedReviews };
+    if (isLiked) {
+      delete nextMap[reviewId];
+    } else {
+      nextMap[reviewId] = true;
+    }
+    
+    set({
+      likedReviews: nextMap,
+      reviews: state.reviews.map(r => 
+        r.id === reviewId 
+          ? { ...r, likes: r.likes + (isLiked ? -1 : 1) } 
+          : r
+      )
+    });
+    
+    // Persist to Supabase if logged in
+    if (userId) {
+      try {
+        if (isLiked) {
+          await supabase.from('review_likes').delete().match({ review_id: reviewId, user_id: userId });
+        } else {
+          await supabase.from('review_likes').insert({ review_id: reviewId, user_id: userId });
+        }
+      } catch (err) {
+        console.error('Failed to toggle like in DB:', err);
+        // Rollback optimistic update on error
+        set({
+          likedReviews: state.likedReviews,
+          reviews: state.reviews
+        });
       }
-      return { likedReviews: next };
+    }
+  },
+
+  isLiked: (reviewId: string) => !!get().likedReviews[reviewId],
     }),
-  isLiked: (reviewId: string) => get().likedReviews.has(reviewId),
-}));
+    {
+      name: 'cafe-reviews-storage',
+      partialize: (state) => ({ likedReviews: state.likedReviews }),
+    }
+  )
+);

@@ -27,7 +27,7 @@ export default function HomeContent() {
           position: 'relative',
           zIndex: 1,
           paddingTop: 16,
-          backgroundColor: '#F8FAFC',
+          backgroundColor: '#FEF9F5',
           borderTopLeftRadius: 52,
           borderTopRightRadius: 52,
           boxShadow: '0 -4px 16px 2px rgba(0,0,0,0.06)',

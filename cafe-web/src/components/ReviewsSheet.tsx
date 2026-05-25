@@ -9,6 +9,7 @@ import {
   getPluralForm,
   type Review,
 } from '../stores/reviews';
+import { useProfileStore } from '../stores/profile';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
     <div
       style={{
         margin: '0 16px 16px',
-        padding: 20,
+        padding: '20px 16px',
         background: 'linear-gradient(to bottom right, #1E293B, #0F172A)',
         borderRadius: 24,
         border: '1px solid rgba(255,255,255,0.06)',
@@ -76,13 +77,13 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
     >
       {/* Left: Big rating */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-        <span style={{ fontSize: 42, fontWeight: 900, color: '#FFF', lineHeight: 1 }}>
+        <span style={{ fontSize: 'clamp(42px, 10.7vw, 60px)', fontWeight: 900, color: '#FFF', lineHeight: 1 }}>
           {avgRating.toFixed(1)}
         </span>
         <div style={{ height: 6 }} />
         <StarRow rating={Math.round(avgRating)} size={16} />
         <div style={{ height: 6 }} />
-        <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.55)' }}>
+        <span style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', fontWeight: 500, color: 'rgba(255,255,255,0.55)' }}>
           {totalCount} {getPluralForm(totalCount)}
         </span>
       </div>
@@ -101,7 +102,7 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
 
           return (
             <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 14, fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)', textAlign: 'right' }}>
+              <span style={{ width: 14, fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 700, color: 'rgba(255,255,255,0.55)', textAlign: 'right' }}>
                 {star}
               </span>
               <div
@@ -119,7 +120,7 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
                   }}
                 />
               </div>
-              <span style={{ width: 20, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.38)' }}>
+              <span style={{ width: 20, fontSize: 'clamp(11px, 2.8vw, 15px)', fontWeight: 600, color: 'rgba(255,255,255,0.38)' }}>
                 {count}
               </span>
             </div>
@@ -134,6 +135,7 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
 
 function ReviewCard({ review }: { review: Review }) {
   const { isLiked, toggleLike } = useReviewsStore();
+  const { id: profileId } = useProfileStore();
   const liked = isLiked(review.id);
 
   const name = review.user?.full_name ?? review.guest_name ?? 'Гость';
@@ -173,7 +175,7 @@ function ReviewCard({ review }: { review: Review }) {
         {/* Avatar */}
         <div
           style={{
-            width: 44, height: 44, borderRadius: '50%',
+            width: 'clamp(44px, 11.2vw, 62px)', height: 'clamp(44px, 11.2vw, 62px)', borderRadius: '50%',
             background: `linear-gradient(to bottom right, ${avatarGradA}, ${avatarGradB})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
@@ -187,7 +189,7 @@ function ReviewCard({ review }: { review: Review }) {
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
-            <span style={{ color: '#FFF', fontWeight: 800, fontSize: 18 }}>{initials}</span>
+            <span style={{ color: '#FFF', fontWeight: 800, fontSize: 'clamp(18px, 4.6vw, 26px)' }}>{initials}</span>
           )}
         </div>
 
@@ -196,7 +198,7 @@ function ReviewCard({ review }: { review: Review }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span
               style={{
-                fontSize: 15, fontWeight: 700, color: '#1E293B',
+                fontSize: 'clamp(15px, 3.8vw, 21px)', fontWeight: 700, color: '#1E293B',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}
             >
@@ -206,7 +208,7 @@ function ReviewCard({ review }: { review: Review }) {
               <span
                 className="icon-material"
                 style={{
-                  fontSize: 14, color: '#10B981',
+                  fontSize: 'clamp(14px, 3.6vw, 20px)', color: '#10B981',
                   fontVariationSettings: "'FILL' 1",
                   flexShrink: 0,
                 }}
@@ -216,11 +218,11 @@ function ReviewCard({ review }: { review: Review }) {
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#94A3B8' }}>{dateStr}</span>
+            <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 500, color: '#94A3B8' }}>{dateStr}</span>
             {staffName && (
               <>
                 <span style={{ color: '#E2E8F0' }}>•</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#C27A3E' }}>{staffName}</span>
+                <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 600, color: '#C27A3E' }}>{staffName}</span>
               </>
             )}
           </div>
@@ -235,13 +237,13 @@ function ReviewCard({ review }: { review: Review }) {
               display: 'flex', alignItems: 'center', gap: 2,
             }}
           >
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#FFF' }}>
+            <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 800, color: '#FFF' }}>
               {getRatingLabel(review.rating)}
             </span>
             <span
               className="icon-material"
               style={{
-                fontSize: 12, color: '#FFF',
+                fontSize: 'clamp(12px, 3.1vw, 16px)', color: '#FFF',
                 fontVariationSettings: "'FILL' 1",
               }}
             >
@@ -257,7 +259,7 @@ function ReviewCard({ review }: { review: Review }) {
       {review.text && (
         <p
           style={{
-            fontSize: 14, color: '#1E293B', lineHeight: 1.5,
+            fontSize: 'clamp(14px, 3.6vw, 20px)', color: '#1E293B', lineHeight: 1.5,
             marginTop: 12, marginBottom: 0,
           }}
         >
@@ -272,7 +274,7 @@ function ReviewCard({ review }: { review: Review }) {
             <div
               key={i}
               style={{
-                width: 80, height: 80, borderRadius: 12, flexShrink: 0,
+                width: 'clamp(80px, 20.4vw, 112px)', height: 'clamp(80px, 20.4vw, 112px)', borderRadius: 12, flexShrink: 0,
                 backgroundColor: '#FFF', border: '1px solid #FFEDD5',
                 overflow: 'hidden',
               }}
@@ -291,7 +293,7 @@ function ReviewCard({ review }: { review: Review }) {
       {/* ── Footer: verified + like ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
         {isVerified ? (
-          <span style={{ fontSize: 10, fontWeight: 600, color: '#10B981' }}>
+          <span style={{ fontSize: 'clamp(10px, 2.6vw, 14px)', fontWeight: 600, color: '#10B981' }}>
             Проверенный покупатель
           </span>
         ) : (
@@ -299,7 +301,7 @@ function ReviewCard({ review }: { review: Review }) {
         )}
         <button
           className="btn-reset"
-          onClick={() => toggleLike(review.id)}
+          onClick={() => toggleLike(review.id, profileId || undefined)}
           style={{
             display: 'flex', alignItems: 'center', gap: 4,
             padding: '4px 8px', borderRadius: 12,
@@ -308,7 +310,7 @@ function ReviewCard({ review }: { review: Review }) {
           <span
             className="icon-material"
             style={{
-              fontSize: 20,
+              fontSize: 'clamp(20px, 5.1vw, 28px)',
               color: liked ? '#EF4444' : '#94A3B8',
               fontVariationSettings: liked ? "'FILL' 1" : "'FILL' 0",
             }}
@@ -317,7 +319,7 @@ function ReviewCard({ review }: { review: Review }) {
           </span>
           <span
             style={{
-              fontSize: 13, fontWeight: 600,
+              fontSize: 'clamp(13px, 3.3vw, 18px)', fontWeight: 600,
               color: liked ? '#EF4444' : '#94A3B8',
             }}
           >
@@ -415,9 +417,9 @@ export default function ReviewsSheet({ onClose }: Props) {
         }}
       >
         {/* ── Header ── */}
-        <div className="flex-between" style={{ padding: '16px 20px 8px' }}>
+        <div className="flex-between" style={{ padding: '16px 16px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
+            <h2 style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
               Отзывы
             </h2>
             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
@@ -426,12 +428,12 @@ export default function ReviewsSheet({ onClose }: Props) {
             className="btn-reset flex-center"
             onClick={onClose}
             style={{
-              width: 36, height: 36, borderRadius: '50%',
+              width: 'clamp(36px, 9.2vw, 50px)', height: 'clamp(36px, 9.2vw, 50px)', borderRadius: '50%',
               backgroundColor: '#F1F5F9',
             }}
           >
             <span className="icon-material" style={{
-              fontSize: 20, color: '#64748B',
+              fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#64748B',
               fontVariationSettings: "'FILL' 0",
             }}>
               close
@@ -455,7 +457,7 @@ export default function ReviewsSheet({ onClose }: Props) {
               }}
             >
               <span className="icon-material" style={{
-                fontSize: 22, color: '#545454',
+                fontSize: 'clamp(22px, 5.6vw, 32px)', color: '#545454',
                 fontVariationSettings: "'FILL' 0",
               }}>
                 search
@@ -467,7 +469,7 @@ export default function ReviewsSheet({ onClose }: Props) {
                 placeholder="Поиск по отзывам"
                 style={{
                   flex: 1, border: 'none', outline: 'none',
-                  fontSize: 15, fontWeight: 500, color: '#0F172A',
+                  fontSize: 'clamp(15px, 3.8vw, 21px)', fontWeight: 500, color: '#0F172A',
                   backgroundColor: 'transparent', fontFamily: "'Outfit', sans-serif",
                 }}
               />
@@ -480,7 +482,7 @@ export default function ReviewsSheet({ onClose }: Props) {
                   }}
                 >
                   <span className="icon-material" style={{
-                    fontSize: 20, color: '#9E9E9E',
+                    fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#9E9E9E',
                   }}>
                     close
                   </span>
@@ -494,12 +496,12 @@ export default function ReviewsSheet({ onClose }: Props) {
                 className="btn-reset flex-center"
                 onClick={() => setShowFilterMenu(!showFilterMenu)}
                 style={{
-                  width: 48, height: 48, borderRadius: '50%',
+                  width: 'clamp(48px, 12.2vw, 67px)', height: 'clamp(48px, 12.2vw, 67px)', borderRadius: '50%',
                   backgroundColor: '#1E293B',
                 }}
               >
                 <span className="icon-material" style={{
-                  fontSize: 22, color: '#FFF',
+                  fontSize: 'clamp(22px, 5.6vw, 32px)', color: '#FFF',
                   fontVariationSettings: "'FILL' 0",
                 }}>
                   tune
@@ -531,8 +533,8 @@ export default function ReviewsSheet({ onClose }: Props) {
                           setShowFilterMenu(false);
                         }}
                         style={{
-                          display: 'block', width: '100%', padding: '12px 20px',
-                          fontSize: 15, fontWeight: filter === key ? 700 : 500,
+                          display: 'block', width: '100%', padding: '12px 16px',
+                          fontSize: 'clamp(15px, 3.8vw, 21px)', fontWeight: filter === key ? 700 : 500,
                           color: filter === key ? '#C27A3E' : '#1E293B',
                           textAlign: 'left',
                         }}
@@ -554,11 +556,11 @@ export default function ReviewsSheet({ onClose }: Props) {
                 padding: '40px 0', gap: 12,
               }}>
                 <span className="icon-material" style={{
-                  fontSize: 52, color: '#CBD5E1',
+                  fontSize: 'clamp(52px, 13.3vw, 73px)', color: '#CBD5E1',
                 }}>
                   chat_bubble_outline
                 </span>
-                <span style={{ fontSize: 16, fontWeight: 600, color: '#94A3B8' }}>
+                <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 600, color: '#94A3B8' }}>
                   Нет отзывов
                 </span>
               </div>

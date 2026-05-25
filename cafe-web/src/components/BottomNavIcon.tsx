@@ -18,7 +18,7 @@ export default function BottomNavIcon({ name, filled, color = '#FFFFFF' }: Props
     <span
       style={{
         fontFamily: "'Material Symbols Rounded'",
-        fontSize: 24,
+        fontSize: 'clamp(24px, 6vw, 32px)',
         fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' 400, 'GRAD' 0, 'opsz' 24`,
         lineHeight: 1,
         display: 'inline-block',

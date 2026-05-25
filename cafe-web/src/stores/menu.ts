@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 import coffee3dImage from '@assets/images/coffee_cup_3d.png';
 import restoranImage from '@assets/images/restoran-komanda.jpg';
 
@@ -11,94 +12,97 @@ export interface MenuItem {
   price: number;
   imageUrl: string;
   isFavorite: boolean;
+  category: string;
 }
 
-const MOCK_MENU: MenuItem[] = [
-  {
-    id: '1',
-    title: 'Бамбл-кофе',
-    description: 'Освежающий трехслойный напиток на основе апельсинового фреша, карамельного сиропа и двойного эспрессо. Идеально бодрит в жаркие летние дни.',
-    price: 250,
-    imageUrl: 'https://images.unsplash.com/photo-1578314675249-a6910f80cc4e?auto=format&fit=crop&w=400&h=400',
-    isFavorite: false,
-  },
-  {
-    id: '2',
-    title: 'Капучино',
-    description: 'Сливочный капучино с нежной пенкой.',
-    price: 150,
-    imageUrl: 'https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=400&h=400',
-    isFavorite: false,
-  },
-  {
-    id: '3',
-    title: 'Круассан классический',
-    description: 'Хрустящий круассан на сливочном масле.',
-    price: 120,
-    imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&h=400',
-    isFavorite: false,
-  },
-  {
-    id: '4',
-    title: 'Круассан с миндалем',
-    description: 'Свежевыпеченный французский круассан с щедрой начинкой из сладкого миндального крема (франжипана) и лепестками миндаля сверху. Подаётся тёплым.',
-    price: 160,
-    imageUrl: 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?auto=format&fit=crop&w=400&h=400',
-    isFavorite: false,
-  },
-  {
-    id: '5',
-    title: 'Фисташковый рулет',
-    description: 'Легкий меренговый рулет со сливочно-фисташковым кремом и свежей малиной. Буквально тает во рту и оставляет нежное ореховое послевкусие.',
-    price: 240,
-    imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&h=400',
-    isFavorite: false,
-  },
-  {
-    id: '6',
-    title: 'Флэт Уайт',
-    description: 'Двойной эспрессо с тонким слоем нежной глянцевой молочной пены. Яркий кофейный вкус для тех, кто любит крепкий, но мягкий кофе.',
-    price: 180,
-    imageUrl: 'https://images.unsplash.com/photo-1579992357154-faf4bde95b3d?auto=format&fit=crop&w=400&h=400',
-    isFavorite: false,
-  },
-  {
-    id: '7',
-    title: 'Эспрессо',
-    description: 'Бодрящий эспрессо из 100% арабики.',
-    price: 100,
-    imageUrl: 'https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=400&h=400',
-    isFavorite: false,
-  },
-  {
-    id: '8',
-    title: 'Эспрессо-тоник',
-    description: 'Двойной эспрессо с холодным тоником, большим количеством льда и долькой сочного грейпфрута. Уникальный баланс горечи кофе и сладости тоника.',
-    price: 220,
-    imageUrl: 'https://images.unsplash.com/photo-1499961024600-ad094db305cc?auto=format&fit=crop&w=400&h=400',
-    isFavorite: false,
-  },
-];
+// MOCK_MENU is removed, we fetch from Supabase
 
 interface MenuState {
   items: MenuItem[];
   searchQuery: string;
   activeTab: MenuTab;
+  sortBy: string;
   setSearchQuery: (query: string) => void;
   setActiveTab: (tab: MenuTab) => void;
-  toggleFavorite: (id: string) => void;
+  setSortBy: (sortBy: string) => void;
+  toggleFavorite: (id: string) => Promise<void>;
+  fetchFavorites: (userId: string) => Promise<void>;
+  fetchMenuItems: () => Promise<void>;
 }
 
-export const useMenuStore = create<MenuState>((set) => ({
-  items: MOCK_MENU,
+export const useMenuStore = create<MenuState>((set, get) => ({
+  items: [],
   searchQuery: '',
   activeTab: 'Меню',
+  sortBy: 'Без сортировки',
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setActiveTab: (tab: MenuTab) => set({ activeTab: tab }),
-  toggleFavorite: (id: string) =>
+  setSortBy: (sortBy: string) => set({ sortBy }),
+
+  fetchMenuItems: async () => {
+    const { data, error } = await supabase.from('menu_items').select('*').order('created_at', { ascending: false });
+    if (data && !error) {
+      set({
+        items: data.map(item => ({
+          id: item.id,
+          title: item.name,
+          description: item.description,
+          price: item.price,
+          imageUrl: item.image_url,
+          category: item.category,
+          isFavorite: false, // will be updated by fetchFavorites later
+        }))
+      });
+      // Try fetching favorites if logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        get().fetchFavorites(session.user.id);
+      }
+    }
+  },
+  
+  fetchFavorites: async (userId: string) => {
+    const { data } = await supabase
+      .from('user_favorites')
+      .select('item_id')
+      .eq('user_id', userId);
+      
+    if (data) {
+      const favoriteIds = new Set(data.map((fav: any) => fav.item_id));
+      set((state) => ({
+        items: state.items.map((item) => ({
+          ...item,
+          isFavorite: favoriteIds.has(item.id)
+        }))
+      }));
+    }
+  },
+
+  toggleFavorite: async (id: string) => {
+    // Optimistic UI update
+    const item = get().items.find(i => i.id === id);
+    const newIsFavorite = !item?.isFavorite;
+    
     set((state) => ({
-      items: state.items.map((item) =>
-        item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
+      items: state.items.map((i) =>
+        i.id === id ? { ...i, isFavorite: newIsFavorite } : i
       ),
-    })),
+    }));
+
+    // Update remote DB
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      if (newIsFavorite) {
+        await supabase.from('user_favorites').insert({
+          user_id: session.user.id,
+          item_id: id,
+        });
+      } else {
+        await supabase.from('user_favorites')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('item_id', id);
+      }
+    }
+  },
 }));

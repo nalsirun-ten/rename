@@ -7,9 +7,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true,
+      },
       manifest: {
-        name: 'Cafe',
-        short_name: 'Cafe',
+        name: 'Cafe V2',
+        short_name: 'Cafe V2',
         theme_color: '#1B5E3D',
         background_color: '#1B5E3D',
         display: 'standalone',
@@ -41,5 +44,9 @@ export default defineConfig({
       '@': '/src',
       '@assets': '/src/public-assets',
     },
+  },
+  server: {
+    allowedHosts: true,
+    host: true, // Also allow local network connections
   },
 })

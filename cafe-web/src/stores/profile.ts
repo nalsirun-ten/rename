@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 
 // ─── Tier system (exact copy of Flutter TierUtils) ───
 const TIERS = [
@@ -25,17 +26,64 @@ export function getNextTierForVisits(visits: number) {
 }
 
 interface ProfileState {
+  id: string | null;
   name: string;
   phone: string;
   points: number;
   visits: number;
   loyaltyNumber: string;
+  photo?: string | null;
+  updateProfile: (data: Partial<Omit<ProfileState, 'updateProfile' | 'fetchProfile'>>) => Promise<void>;
+  fetchProfile: (userId: string) => Promise<void>;
 }
 
-export const useProfileStore = create<ProfileState>(() => ({
-  name: 'Даниэль',
-  phone: '+996 555 123 456',
-  points: 30,
-  visits: 45,
+export const useProfileStore = create<ProfileState>((set) => ({
+  id: null,
+  name: 'Загрузка...',
+  phone: '',
+  points: 0,
+  visits: 0,
   loyaltyNumber: '000000',
+  photo: null,
+  
+  fetchProfile: async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    if (data && !error) {
+      set({
+        id: data.id,
+        name: data.full_name || 'Гость',
+        phone: data.phone || '',
+        points: data.points_balance || 0,
+        visits: data.stamps_count || 0,
+        loyaltyNumber: '000000', // not in DB yet
+        photo: data.avatar_url || null,
+      });
+    }
+  },
+
+  updateProfile: async (data) => {
+    // Optimistic update
+    set((state) => ({ ...state, ...data }));
+    
+    // Save to Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const updates = {
+        full_name: data.name,
+        avatar_url: data.photo,
+      };
+      // remove undefined
+      Object.keys(updates).forEach(key => updates[key as keyof typeof updates] === undefined && delete updates[key as keyof typeof updates]);
+      
+      await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', session.user.id);
+    }
+  },
 }));

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -33,59 +34,33 @@ export function getCategoryColor(category: NewsItem['category']): string {
   }
 }
 
-// ─── Mock data ───────────────────────────────────────────────────────
-
-const MOCK_NEWS: NewsItem[] = [
-  {
-    id: '1',
-    title: 'Новое летнее меню уже здесь!',
-    content: 'Мы обновили меню: свежие лимонады, холодный кофе и новые десерты. Заходите попробовать первыми! В ассортименте: лавандовый раф, матча-латте со льдом, фирменный айс-капучино и многое другое.',
-    category: 'promo',
-    imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&h=500',
-    createdAt: '2026-05-22T10:00:00Z',
-  },
-  {
-    id: '2',
-    title: 'Мастер-класс по латте-арту',
-    content: 'Приглашаем всех желающих на бесплатный мастер-класс! Наш бариста Азамат покажет, как создавать красивый латте-арт. Суббота, 15:00. Количество мест ограничено, записывайтесь у администратора.',
-    category: 'event',
-    imageUrl: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=800&h=500',
-    createdAt: '2026-05-18T14:00:00Z',
-  },
-  {
-    id: '3',
-    title: 'Скидка 20% на все десерты',
-    content: 'Только в эти выходные скидка 20% на все десерты при заказе любого кофе. Попробуйте наш фирменный чизкейк и тирамису! Акция действует во всех филиалах.',
-    category: 'promo',
-    imageUrl: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&h=500',
-    createdAt: '2026-05-15T08:00:00Z',
-  },
-  {
-    id: '4',
-    title: 'Открытие нового филиала',
-    content: 'Мы открываем новый филиал в центре города! Адрес: ул. Чуй, 123. В день открытия — бесплатный кофе для первых 50 гостей. Ждём вас!',
-    category: 'event',
-    imageUrl: 'https://images.unsplash.com/photo-1521017430055-16c141753381?auto=format&fit=crop&w=800&h=500',
-    createdAt: '2026-05-10T12:00:00Z',
-  },
-  {
-    id: '5',
-    title: 'Новые часы работы',
-    content: 'Обратите внимание: с 1 июня мы переходим на летний режим работы. Теперь мы открыты с 7:00 до 23:00 ежедневно. Утренний кофе стал ещё доступнее!',
-    category: 'info',
-    imageUrl: 'https://images.unsplash.com/photo-1506844902148-1cd7eb230238?auto=format&fit=crop&w=800&h=500',
-    createdAt: '2026-05-05T09:00:00Z',
-  },
-];
-
+// MOCK_NEWS is removed, we fetch from Supabase
 // ─── Store ───────────────────────────────────────────────────────────
 
 interface NewsState {
   news: NewsItem[];
   isLoading: boolean;
+  fetchNews: () => Promise<void>;
 }
 
-export const useNewsStore = create<NewsState>(() => ({
-  news: MOCK_NEWS,
+export const useNewsStore = create<NewsState>((set) => ({
+  news: [],
   isLoading: false,
+  fetchNews: async () => {
+    set({ isLoading: true });
+    const { data, error } = await supabase.from('news_posts').select('*').order('created_at', { ascending: false });
+    if (data && !error) {
+      set({
+        news: data.map(item => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          imageUrl: item.image_url,
+          createdAt: item.created_at,
+          category: 'info', // DB is missing category, fallback to info
+        }))
+      });
+    }
+    set({ isLoading: false });
+  }
 }));
