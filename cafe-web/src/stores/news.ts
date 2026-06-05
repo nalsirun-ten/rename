@@ -1,5 +1,8 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
+import { retry } from '../lib/retry';
+import type { TranslationKey } from '../i18n/translations';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -25,6 +28,17 @@ export function getCategoryTag(category: NewsItem['category']): string {
   return CATEGORY_TAGS[category] ?? 'Новость';
 }
 
+const CATEGORY_TAG_KEYS: Record<NewsItem['category'], TranslationKey> = {
+  event: 'news_category_event',
+  promo: 'news_category_promo',
+  info: 'news_category_info',
+  service: 'news_category_service',
+};
+
+export function getCategoryTagKey(category: NewsItem['category']): TranslationKey {
+  return CATEGORY_TAG_KEYS[category] ?? 'news_category_info';
+}
+
 export function getCategoryColor(category: NewsItem['category']): string {
   switch (category) {
     case 'promo': return '#EF4444';
@@ -40,27 +54,45 @@ export function getCategoryColor(category: NewsItem['category']): string {
 interface NewsState {
   news: NewsItem[];
   isLoading: boolean;
-  fetchNews: () => Promise<void>;
+  lastFetchedAt: number;
+  fetchNews: (force?: boolean) => Promise<void>;
 }
 
-export const useNewsStore = create<NewsState>((set) => ({
-  news: [],
-  isLoading: false,
-  fetchNews: async () => {
-    set({ isLoading: true });
-    const { data, error } = await supabase.from('news_posts').select('*').order('created_at', { ascending: false });
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export const useNewsStore = create<NewsState>()(
+  persist(
+    (set, get) => ({
+      news: [],
+      isLoading: false,
+      lastFetchedAt: 0,
+      fetchNews: async (force = false) => {
+        // Skip if loaded AND recently fetched (unless forced)
+        const state = get();
+        if (!force && state.news.length > 0 && Date.now() - state.lastFetchedAt < CACHE_TTL_MS) return;
+    // Only show skeletons on initial load, not on background refresh
+    const hasExisting = get().news.length > 0;
+    if (!hasExisting) set({ isLoading: true });
+    const { data, error } = await retry(() => supabase.from('news_posts').select('*').order('created_at', { ascending: false }));
     if (data && !error) {
       set({
-        news: data.map(item => ({
+        news: data.map((item: any) => ({
           id: item.id,
           title: item.title,
           content: item.content,
           imageUrl: item.image_url,
           createdAt: item.created_at,
-          category: 'info', // DB is missing category, fallback to info
-        }))
+          category: 'info' as const, // DB is missing category, fallback to info
+        })),
+        lastFetchedAt: Date.now(),
       });
     }
     set({ isLoading: false });
   }
-}));
+}),
+    {
+      name: 'cafe-news-storage',
+      partialize: (state) => ({ news: state.news, lastFetchedAt: state.lastFetchedAt }),
+    }
+  )
+);

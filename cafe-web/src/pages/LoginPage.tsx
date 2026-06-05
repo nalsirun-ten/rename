@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import CountrySelectModal, { COUNTRIES } from '../components/CountrySelectModal';
+import { useT } from '../i18n/useT';
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
@@ -7,34 +9,90 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [isCountryModalOpen, setIsCountryModalOpen] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const t = useT();
 
-  const handleDemoLogin = async () => {
-    setLoading(true);
-    setError(null);
-    const { error } = await supabase.auth.signInAnonymously();
-    if (error) {
-      setError(error.message + ' (Возможно, анонимный вход не включен в Supabase)');
+  useEffect(() => {
+    if (token.length === 6 && otpSent && !loading && !error) {
+      handleVerifyOtp();
     }
-    setLoading(false);
+  }, [token, otpSent, loading, error]);
+
+  const handleOtpChange = (index: number, val: string) => {
+    setError(null);
+    const char = val.replace(/\D/g, '').slice(-1);
+    const newTokenArray = token.padEnd(6, ' ').split('');
+    newTokenArray[index] = char || ' ';
+    
+    const newToken = newTokenArray.join('').trimEnd();
+    setToken(newToken);
+
+    if (char && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
   };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (!token[index] || token[index] === ' ') {
+        if (index > 0) {
+          e.preventDefault();
+          const newTokenArray = token.padEnd(6, ' ').split('');
+          newTokenArray[index - 1] = ' ';
+          setToken(newTokenArray.join('').trimEnd());
+          inputRefs.current[index - 1]?.focus();
+        }
+      } else {
+        const newTokenArray = token.padEnd(6, ' ').split('');
+        newTokenArray[index] = ' ';
+        setToken(newTokenArray.join('').trimEnd());
       }
-    });
-    if (error) setError(error.message);
-    setLoading(false);
+    }
   };
 
-  const handlePhoneLogin = async () => {
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text/plain').replace(/\D/g, '').slice(0, 6);
+    if (pasted) {
+      setToken(pasted);
+      if (pasted.length < 6) {
+        inputRefs.current[pasted.length]?.focus();
+      } else {
+        inputRefs.current[5]?.focus();
+      }
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '');
+    const format = selectedCountry.format || 'XXX XXX XXX';
+    
+    let formatted = '';
+    let digitIndex = 0;
+    
+    for (let i = 0; i < format.length; i++) {
+      if (digitIndex >= digits.length) break;
+      
+      if (format[i] === 'X') {
+        formatted += digits[digitIndex];
+        digitIndex++;
+      } else {
+        formatted += format[i];
+      }
+    }
+    
+    setPhone(formatted);
+  };
+
+  const handlePhoneLogin = async (channel: 'sms' | 'whatsapp') => {
     setLoading(true);
     setError(null);
+    const fullPhone = `${selectedCountry.code}${phone.replace(/\D/g, '')}`;
     const { error } = await supabase.auth.signInWithOtp({
-      phone,
+      phone: fullPhone,
+      options: { channel }
     });
     if (error) {
       setError(error.message);
@@ -47,8 +105,9 @@ export default function LoginPage() {
   const handleVerifyOtp = async () => {
     setLoading(true);
     setError(null);
+    const fullPhone = `${selectedCountry.code}${phone.replace(/\\D/g, '')}`;
     const { error } = await supabase.auth.verifyOtp({
-      phone,
+      phone: fullPhone,
       token,
       type: 'sms',
     });
@@ -72,8 +131,8 @@ export default function LoginPage() {
       justifyContent: 'center',
     }}>
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12 }}>Cafe App</h1>
-        <p style={{ fontSize: 16, opacity: 0.8 }}>Войдите, чтобы сохранять избранное и получать бонусы</p>
+        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12 }}>Green Chicken App</h1>
+        <p style={{ fontSize: 16, opacity: 0.8 }}>{t('login_subtitle')}</p>
       </div>
 
       <div style={{
@@ -90,119 +149,121 @@ export default function LoginPage() {
 
         {!otpSent ? (
           <>
-            <button
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="btn-reset"
-              style={{
-                width: '100%',
-                padding: '16px',
-                borderRadius: 16,
-                backgroundColor: '#F1F5F9',
-                color: '#1E293B',
-                fontSize: 16,
-                fontWeight: 700,
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>
+                {t('login_phone_label')}
+              </label>
+              <p style={{ fontSize: 13, color: '#94A3B8', marginBottom: 12, lineHeight: 1.4, marginTop: 0 }}>
+                {t('login_phone_hint')}
+              </p>
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 24,
-              }}
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: 24, height: 24, marginRight: 12 }} />
-              Войти через Google
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
-              <div style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
-              <span style={{ padding: '0 12px', color: '#94A3B8', fontSize: 14, fontWeight: 500 }}>ИЛИ</span>
-              <div style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>
-                Номер телефона (WhatsApp)
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+996 555 123 456"
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: 16,
-                  border: '1px solid #E2E8F0',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+                gap: 8,
+              }}>
+                <button
+                  className="btn-reset"
+                  onClick={() => setIsCountryModalOpen(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '16px 12px',
+                    borderRadius: 16,
+                    border: '1px solid #E2E8F0',
+                    backgroundColor: '#F1F5F9',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    height: 56,
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <span style={{ fontSize: 24, marginRight: 8 }}>{selectedCountry.flag}</span>
+                  <span style={{ color: '#1E293B', marginRight: 4 }}>{selectedCountry.code}</span>
+                  <span className="icon-material" style={{ fontSize: 20, color: '#94A3B8' }}>
+                    expand_more
+                  </span>
+                </button>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  placeholder={selectedCountry.format ? selectedCountry.format.replace(/X/g, '0') : '000 000 000'}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: '16px',
+                    borderRadius: 16,
+                    border: '1px solid #E2E8F0',
+                    backgroundColor: '#FFFFFF',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    outline: 'none',
+                    height: 56,
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
             </div>
             <button
-              onClick={handlePhoneLogin}
-              disabled={loading || phone.length < 9}
+              onClick={() => handlePhoneLogin('whatsapp')}
+              disabled={loading || phone.replace(/\D/g, '').length < (selectedCountry.format?.replace(/[^X]/g, '').length || 9)}
               className="btn-reset"
               style={{
                 width: '100%',
                 padding: '16px',
                 borderRadius: 16,
-                backgroundColor: '#1B5E3D',
+                backgroundColor: '#25D366',
                 color: '#FFF',
                 fontSize: 16,
                 fontWeight: 700,
-                opacity: (loading || phone.length < 9) ? 0.7 : 1,
+                opacity: (loading || phone.replace(/\D/g, '').length < (selectedCountry.format?.replace(/[^X]/g, '').length || 9)) ? 0.7 : 1,
                 marginBottom: 16,
               }}
             >
-              Получить код
-            </button>
-            <button
-              onClick={handleDemoLogin}
-              disabled={loading}
-              className="btn-reset"
-              style={{
-                width: '100%',
-                padding: '16px',
-                borderRadius: 16,
-                backgroundColor: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                color: '#64748B',
-                fontSize: 16,
-                fontWeight: 600,
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              Войти как демо
+              {t('login_get_code_whatsapp')}
             </button>
           </>
         ) : (
           <>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#64748B', marginBottom: 8 }}>
-                Код из SMS/WhatsApp
-              </label>
-              <input
-                type="text"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="123456"
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: 16,
-                  border: '1px solid #E2E8F0',
-                  backgroundColor: '#F8FAFC',
-                  fontSize: 24,
-                  fontWeight: 800,
-                  letterSpacing: 4,
-                  textAlign: 'center',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
+            <div style={{ marginBottom: 32, textAlign: 'center' }}>
+              <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1E293B', margin: '0 0 12px 0' }}>{t('login_otp_title') || 'Введите код'}</h2>
+              <p style={{ fontSize: 15, color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+                {t('login_otp_subtitle_whatsapp')}
+              </p>
             </div>
+            
+            <div style={{
+              display: 'flex',
+              gap: 8,
+              justifyContent: 'center',
+              marginBottom: 32
+            }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <input
+                  key={i}
+                  ref={(el) => { inputRefs.current[i] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  value={token[i] && token[i] !== ' ' ? token[i] : ''}
+                  onChange={(e) => handleOtpChange(i, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  onPaste={handleOtpPaste}
+                  style={{
+                    width: 45,
+                    height: 56,
+                    borderRadius: 12,
+                    border: '1px solid #E2E8F0',
+                    backgroundColor: '#F8FAFC',
+                    fontSize: 24,
+                    fontWeight: 700,
+                    textAlign: 'center',
+                    outline: 'none',
+                    color: '#1E293B'
+                  }}
+                />
+              ))}
+            </div>
+
             <button
               onClick={handleVerifyOtp}
               disabled={loading || token.length < 6}
@@ -217,9 +278,20 @@ export default function LoginPage() {
                 fontWeight: 700,
                 opacity: (loading || token.length < 6) ? 0.7 : 1,
                 marginBottom: 16,
+                display: loading ? 'flex' : 'block',
+                justifyContent: 'center',
+                alignItems: 'center'
               }}
             >
-              Подтвердить
+              {loading ? (
+                <div style={{
+                  width: 20, height: 20,
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#FFF',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              ) : t('login_confirm')}
             </button>
             <button
               onClick={() => setOtpSent(false)}
@@ -232,11 +304,22 @@ export default function LoginPage() {
                 fontWeight: 600,
               }}
             >
-              Изменить номер
+              {t('login_change_number')}
             </button>
           </>
         )}
       </div>
+
+      {isCountryModalOpen && (
+        <CountrySelectModal
+          onClose={() => setIsCountryModalOpen(false)}
+          onSelect={(country) => {
+            setSelectedCountry(country);
+            setPhone(''); // Clear phone when changing country
+          }}
+          selectedCode={selectedCountry.code}
+        />
+      )}
     </div>
   );
 }

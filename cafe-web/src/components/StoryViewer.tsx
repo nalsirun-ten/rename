@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useStoriesStore } from '../stores/stories';
+import { useHardwareBack } from '../hooks/useHardwareBack';
 
 const DURATION_IMAGE = 5000; // 5 seconds for images
 
 export default function StoryViewer() {
   const { stories, activeStoryId, closeStory, markAsSeen } = useStoriesStore();
+  useHardwareBack(closeStory, activeStoryId !== null);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -26,7 +29,7 @@ export default function StoryViewer() {
         setCurrentIndex(idx);
         setProgress(0);
         setIsPaused(false);
-        setMediaDuration(stories[idx].videoUrl ? DURATION_IMAGE : DURATION_IMAGE);
+        
         pausedProgressRef.current = 0;
         markAsSeen(stories[idx].id);
       }
@@ -43,7 +46,9 @@ export default function StoryViewer() {
       pausedProgressRef.current = 0;
       markAsSeen(stories[currentIndex + 1].id);
     } else {
-      closeStory();
+      // Delay close so the overlay absorbs the pointer event and it doesn't
+      // "fall through" to the page underneath.
+      setTimeout(() => closeStory(), 50);
     }
   }, [currentIndex, stories, closeStory, markAsSeen]);
 
@@ -135,6 +140,8 @@ export default function StoryViewer() {
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const holdDuration = Date.now() - pointerDownTime.current;
     setIsPaused(false);
     
@@ -170,12 +177,18 @@ export default function StoryViewer() {
       }}
     >
       {/* Media container */}
-      <div 
-        style={{ flex: 1, position: 'relative' }}
+      <div
+        style={{
+          flex: 1, position: 'relative',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+        }}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={() => setIsPaused(false)}
         onPointerLeave={() => setIsPaused(false)}
+        onContextMenu={(e) => e.preventDefault()}
       >
         {currentStory.videoUrl ? (
           <video
@@ -184,13 +197,15 @@ export default function StoryViewer() {
             onLoadedMetadata={handleVideoLoadedMetadata}
             playsInline
             loop={false}
-            style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' } as any}
+            onContextMenu={(e) => e.preventDefault()}
           />
         ) : (
-          <img 
-            src={currentStory.imageUrl} 
+          <img
+            src={currentStory.imageUrl}
             alt={currentStory.title}
-            style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }}
+            draggable={false}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', pointerEvents: 'none' } as any}
           />
         )}
 
@@ -251,10 +266,10 @@ export default function StoryViewer() {
           pointerEvents: 'none', // let clicks pass through to media container
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 'clamp(32px, 8.2vw, 45px)', height: 'clamp(32px, 8.2vw, 45px)', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(16px, 4vw, 22px)' }}>
+            <div style={{ width: 'clamp(32px, 8.2rem, 45px)', height: 'clamp(32px, 8.2rem, 45px)', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(16px, 4rem, 22px)' }}>
               {currentStory.category === 'promo' ? '🏷️' : '☕'}
             </div>
-            <span style={{ color: '#fff', fontWeight: 600, fontSize: 'clamp(14px, 3.6vw, 20px)', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+            <span style={{ color: '#fff', fontWeight: 600, fontSize: 'clamp(14px, 3.6rem, 20px)', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
               {currentStory.title}
             </span>
           </div>
@@ -265,7 +280,7 @@ export default function StoryViewer() {
               background: 'none', 
               border: 'none', 
               color: '#fff', 
-              fontSize: 'clamp(24px, 6.1vw, 34px)', 
+              fontSize: 'clamp(24px, 6.1rem, 34px)', 
               padding: 8,
               pointerEvents: 'auto', // enable clicks for close button
             }}

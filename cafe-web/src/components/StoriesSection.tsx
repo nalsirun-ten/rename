@@ -1,5 +1,7 @@
+import { useMemo, useCallback } from 'react';
 import { useStoriesStore, CAT_CFG } from '../stores/stories';
 import type { Story } from '../stores/stories';
+import { useT } from '../i18n/useT';
 
 // ─── Styles ───────────────────────────────────────────────────────
 
@@ -17,6 +19,7 @@ const scrollStyle: React.CSSProperties = {
   scrollbarWidth: 'none',       // Firefox
   msOverflowStyle: 'none',      // IE
   WebkitOverflowScrolling: 'touch',
+  overscrollBehaviorX: 'contain',
 };
 
 // ─── Skeleton (loading state) ─────────────────────────────────────
@@ -26,18 +29,14 @@ function StoriesSkeleton() {
   const items = Array.from({ length: 5 }, (_, i) => (
     <div key={i} style={{ marginRight: 14, flexShrink: 0 }}>
       {/* Circle placeholder */}
-      <div style={{
-        width: 'clamp(76px, 19.5vw, 100px)', height: 'clamp(76px, 19.5vw, 100px)', borderRadius: '50%',
-        backgroundColor: '#E2E8F0',
-        animation: 'stories-pulse 1200ms ease-in-out infinite',
+      <div className="skeleton-pulse" style={{
+        width: 'clamp(76px, 19.5rem, 100px)', height: 'clamp(76px, 19.5rem, 100px)', borderRadius: '50%',
       }} />
       {/* Gap: SizedBox(height:8) */}
       <div style={{ height: 8 }} />
       {/* Text placeholder */}
-      <div style={{
-        width: 'calc(clamp(76px, 19.5vw, 100px) - 16px)', height: 13, borderRadius: 4,
-        backgroundColor: '#E2E8F0',
-        animation: 'stories-pulse 1200ms ease-in-out infinite',
+      <div className="skeleton-pulse" style={{
+        width: 'calc(clamp(76px, 19.5rem, 100px) - 16px)', height: 13, borderRadius: 4, margin: '0 auto'
       }} />
     </div>
   ));
@@ -59,10 +58,8 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
     : 'conic-gradient(#8B5E3C, #D4A373, #8B5E3C)';
 
   // Inner background (inside the border)
-  // Has image → show image; no image → category gradient
-  const innerBg = hasImage
-    ? undefined
-    : `linear-gradient(to bottom right, ${cfg.colors[0]}, ${cfg.colors[1]})`;
+  // Show category gradient as a placeholder even if we have an image
+  const innerBg = `linear-gradient(to bottom right, ${cfg.colors[0]}, ${cfg.colors[1]})`;
 
   return (
     <button
@@ -76,7 +73,7 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
     >
       {/* ── Outer ring ── */}
       <div style={{
-        width: 'clamp(76px, 19.5vw, 100px)', height: 'clamp(76px, 19.5vw, 100px)', padding: 2.5, borderRadius: '50%',
+        width: 'clamp(76px, 19.5rem, 100px)', height: 'clamp(76px, 19.5rem, 100px)', padding: 2.5, borderRadius: '50%',
         background: outerBg,
       }}>
         {/* ── Inner border: Container(border:2.5px white, circle) ── */}
@@ -95,6 +92,7 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
               <img
                 src={story.imageUrl}
                 alt={story.title}
+                loading="lazy"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => {
                   // Flutter: errorWidget → show emoji
@@ -107,7 +105,7 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
             ) : null}
             {/* Emoji fallback — always rendered, hidden if image loads successfully */}
             <span style={{
-              fontSize: 'clamp(25px, 6.4vw, 32px)',
+              fontSize: 'clamp(25px, 6.4rem, 32px)',
               lineHeight: 1,
               display: hasImage ? 'none' : 'flex',
               alignItems: 'center',
@@ -126,8 +124,8 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
 
       {/* ── Label ── */}
       <span style={{
-        width: 'clamp(76px, 19.5vw, 100px)',
-        fontSize: 'clamp(12px, 3.1vw, 15px)',
+        width: 'clamp(76px, 19.5rem, 100px)',
+        fontSize: 'clamp(12px, 3.1rem, 15px)',
         fontWeight: 600,
         color: 'rgba(255,255,255,0.9)',
         letterSpacing: -0.2,
@@ -145,18 +143,27 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
 // ─── Section ──────────────────────────────────────────────────────
 
 export default function StoriesSection() {
+  const t = useT();
   const { stories, isLoading, seenStories, markAsSeen, openStory } = useStoriesStore();
 
   // Sort: unseen first, seen last (Instagram-style)
-  const sortedStories = [...stories].sort((a, b) => {
-    const aSeen = seenStories[a.id] ? 1 : 0;
-    const bSeen = seenStories[b.id] ? 1 : 0;
-    return aSeen - bSeen;
-  });
+  const sortedStories = useMemo(() =>
+    [...stories].sort((a, b) => {
+      const aSeen = seenStories[a.id] ? 1 : 0;
+      const bSeen = seenStories[b.id] ? 1 : 0;
+      return aSeen - bSeen;
+    }),
+    [stories, seenStories]
+  );
+
+  const handleTap = useCallback((storyId: string) => {
+    markAsSeen(storyId);
+    openStory(storyId);
+  }, [markAsSeen, openStory]);
 
   return (
     <div style={sectionStyle}>
-      <div style={{ height: 'calc(clamp(76px, 19.5vw, 100px) + 34px)' }}>
+      <div style={{ height: 'calc(clamp(76px, 19.5rem, 100px) + 34px)' }}>
         {isLoading ? (
           <StoriesSkeleton />
         ) : stories.length === 0 ? (
@@ -164,7 +171,7 @@ export default function StoriesSection() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             height: '100%', color: '#94A3B8', fontSize: 12,
           }}>
-            Нет историй
+            {t('stories_empty')}
           </div>
         ) : (
           <div
@@ -176,10 +183,7 @@ export default function StoriesSection() {
                 key={story.id || String(index)}
                 story={story}
                 isSeen={!!seenStories[story.id]}
-                onTap={() => {
-                  markAsSeen(story.id);
-                  openStory(story.id);
-                }}
+                onTap={() => handleTap(story.id)}
               />
             ))}
           </div>

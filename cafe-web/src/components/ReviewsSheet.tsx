@@ -1,30 +1,36 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   useReviewsStore,
-  getRatingLabel,
+  getRatingLabelKey,
   getRatingColor,
   getAvatarGradient,
   getInitials,
-  getPluralForm,
+  getPluralFormKey,
   type Review,
 } from '../stores/reviews';
 import { useProfileStore } from '../stores/profile';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { useOverlayClose } from '../hooks/useOverlayClose';
+import { useT } from '../i18n/useT';
+import type { TranslationKey } from '../i18n/translations';
+
 
 // ─── Types ───────────────────────────────────────────────────────────
 
 type FilterMode = 'most_liked' | 'recent' | 'positive' | 'negative';
 
-const FILTER_LABELS: Record<FilterMode, string> = {
-  most_liked: 'Популярные',
-  recent: 'Новые',
-  positive: 'Положительные',
-  negative: 'Отрицательные',
+const FILTER_LABEL_KEYS: Record<FilterMode, TranslationKey> = {
+  most_liked: 'reviews_filter_popular',
+  recent: 'reviews_filter_new',
+  positive: 'reviews_filter_positive',
+  negative: 'reviews_filter_negative',
 };
 
 // ─── Rating stars helper ─────────────────────────────────────────────
 
-function StarRow({ rating, size = 10 }: { rating: number; size?: number }) {
+function StarRow({ rating, size }: { rating: number; size?: string }) {
   return (
     <div style={{ display: 'flex', gap: 2 }}>
       {[1, 2, 3, 4, 5].map((star) => {
@@ -49,17 +55,11 @@ function StarRow({ rating, size = 10 }: { rating: number; size?: number }) {
 
 // ─── StatsCard ───────────────────────────────────────────────────────
 
-function StatsCard({ reviews }: { reviews: Review[] }) {
-  const totalCount = reviews.length;
-  const avgRating =
-    totalCount > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalCount
-      : 0;
+function StatsCard({ stats }: { stats: { totalCount: number; avgRating: number; dist: number[] } | null }) {
+  const t = useT();
+  if (!stats) return null;
 
-  // Distribution: count per star (5,4,3,2,1)
-  const dist = [5, 4, 3, 2, 1].map(
-    (star) => reviews.filter((r) => r.rating === star).length,
-  );
+  const { totalCount, avgRating, dist } = stats;
   const maxDist = Math.max(...dist, 1);
 
   return (
@@ -77,14 +77,14 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
     >
       {/* Left: Big rating */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-        <span style={{ fontSize: 'clamp(42px, 10.7vw, 60px)', fontWeight: 900, color: '#FFF', lineHeight: 1 }}>
+        <span style={{ fontSize: 'clamp(42px, 10.7rem, 60px)', fontWeight: 900, color: '#FFF', lineHeight: 1 }}>
           {avgRating.toFixed(1)}
         </span>
         <div style={{ height: 6 }} />
-        <StarRow rating={Math.round(avgRating)} size={16} />
+        <StarRow rating={Math.round(avgRating)} size={'clamp(13px, 4.1rem, 22px)'} />
         <div style={{ height: 6 }} />
-        <span style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', fontWeight: 500, color: 'rgba(255,255,255,0.55)' }}>
-          {totalCount} {getPluralForm(totalCount)}
+        <span style={{ fontSize: 'clamp(13px, 3.3rem, 18px)', fontWeight: 500, color: 'rgba(255,255,255,0.55)' }}>
+          {totalCount} {t(getPluralFormKey(totalCount))}
         </span>
       </div>
 
@@ -102,7 +102,7 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
 
           return (
             <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 14, fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 700, color: 'rgba(255,255,255,0.55)', textAlign: 'right' }}>
+              <span style={{ width: 14, fontSize: 'clamp(12px, 3.1rem, 16px)', fontWeight: 700, color: 'rgba(255,255,255,0.55)', textAlign: 'right' }}>
                 {star}
               </span>
               <div
@@ -120,7 +120,7 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
                   }}
                 />
               </div>
-              <span style={{ width: 20, fontSize: 'clamp(11px, 2.8vw, 15px)', fontWeight: 600, color: 'rgba(255,255,255,0.38)' }}>
+              <span style={{ width: 20, fontSize: 'clamp(11px, 2.8rem, 15px)', fontWeight: 600, color: 'rgba(255,255,255,0.38)' }}>
                 {count}
               </span>
             </div>
@@ -136,13 +136,13 @@ function StatsCard({ reviews }: { reviews: Review[] }) {
 function ReviewCard({ review }: { review: Review }) {
   const { isLiked, toggleLike } = useReviewsStore();
   const { id: profileId } = useProfileStore();
+  const t = useT();
   const liked = isLiked(review.id);
 
-  const name = review.user?.full_name ?? review.guest_name ?? 'Гость';
+  const name = review.user?.full_name ?? review.guest_name ?? t('guest');
   const avatarUrl = review.user?.avatar_url ?? review.guest_avatar;
   const initials = getInitials(name);
   const [avatarGradA, avatarGradB] = getAvatarGradient(name);
-  const staffName = review.doctor?.full_name;
   const isVerified = !!review.user?.id;
 
   // Format date
@@ -165,9 +165,10 @@ function ReviewCard({ review }: { review: Review }) {
       style={{
         marginBottom: 12,
         padding: 16,
-        backgroundColor: '#EFF6FF',
+        backgroundColor: '#FFFFFF',
         borderRadius: 32,
-        border: '1px solid #BFDBFE',
+        border: 'none',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.18)',
       }}
     >
       {/* ── Header: Avatar, Name, Ratings ── */}
@@ -175,7 +176,7 @@ function ReviewCard({ review }: { review: Review }) {
         {/* Avatar */}
         <div
           style={{
-            width: 'clamp(44px, 11.2vw, 62px)', height: 'clamp(44px, 11.2vw, 62px)', borderRadius: '50%',
+            width: 'clamp(44px, 11.2rem, 62px)', height: 'clamp(44px, 11.2rem, 62px)', borderRadius: '50%',
             background: `linear-gradient(to bottom right, ${avatarGradA}, ${avatarGradB})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
@@ -185,20 +186,21 @@ function ReviewCard({ review }: { review: Review }) {
             <img
               src={avatarUrl}
               alt={name}
+              loading="lazy"
               style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
-            <span style={{ color: '#FFF', fontWeight: 800, fontSize: 'clamp(18px, 4.6vw, 26px)' }}>{initials}</span>
+            <span style={{ color: '#FFF', fontWeight: 800, fontSize: 'clamp(18px, 4.6rem, 26px)' }}>{initials}</span>
           )}
         </div>
 
-        {/* Name, Date, Staff */}
+        {/* Name, Date */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span
               style={{
-                fontSize: 'clamp(15px, 3.8vw, 21px)', fontWeight: 700, color: '#1E293B',
+                fontSize: 'clamp(15px, 3.8rem, 21px)', fontWeight: 700, color: '#1E293B',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}
             >
@@ -208,7 +210,7 @@ function ReviewCard({ review }: { review: Review }) {
               <span
                 className="icon-material"
                 style={{
-                  fontSize: 'clamp(14px, 3.6vw, 20px)', color: '#10B981',
+                  fontSize: 'clamp(14px, 3.6rem, 20px)', color: '#10B981',
                   fontVariationSettings: "'FILL' 1",
                   flexShrink: 0,
                 }}
@@ -218,13 +220,7 @@ function ReviewCard({ review }: { review: Review }) {
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 500, color: '#94A3B8' }}>{dateStr}</span>
-            {staffName && (
-              <>
-                <span style={{ color: '#E2E8F0' }}>•</span>
-                <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 600, color: '#C27A3E' }}>{staffName}</span>
-              </>
-            )}
+            <span style={{ fontSize: 'clamp(12px, 3.1rem, 16px)', fontWeight: 500, color: '#94A3B8' }}>{dateStr}</span>
           </div>
         </div>
 
@@ -237,13 +233,13 @@ function ReviewCard({ review }: { review: Review }) {
               display: 'flex', alignItems: 'center', gap: 2,
             }}
           >
-            <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 800, color: '#FFF' }}>
-              {getRatingLabel(review.rating)}
+            <span style={{ fontSize: 'clamp(12px, 3.1rem, 16px)', fontWeight: 800, color: '#FFF' }}>
+              {t(getRatingLabelKey(review.rating))}
             </span>
             <span
               className="icon-material"
               style={{
-                fontSize: 'clamp(12px, 3.1vw, 16px)', color: '#FFF',
+                fontSize: 'clamp(12px, 3.1rem, 16px)', color: '#FFF',
                 fontVariationSettings: "'FILL' 1",
               }}
             >
@@ -251,7 +247,7 @@ function ReviewCard({ review }: { review: Review }) {
             </span>
           </div>
           <div style={{ height: 4 }} />
-          <StarRow rating={review.rating} size={10} />
+          <StarRow rating={review.rating} size={'clamp(8px, 2.5rem, 14px)'} />
         </div>
       </div>
 
@@ -259,7 +255,7 @@ function ReviewCard({ review }: { review: Review }) {
       {review.text && (
         <p
           style={{
-            fontSize: 'clamp(14px, 3.6vw, 20px)', color: '#1E293B', lineHeight: 1.5,
+            fontSize: 'clamp(14px, 3.6rem, 20px)', color: '#1E293B', lineHeight: 1.5,
             marginTop: 12, marginBottom: 0,
           }}
         >
@@ -269,19 +265,19 @@ function ReviewCard({ review }: { review: Review }) {
 
       {/* ── Images ── */}
       {review.images && review.images.length > 0 && (
-        <div style={{ display: 'flex', gap: 10, marginTop: 12, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 12, overflowX: 'auto', overscrollBehaviorX: 'contain' }}>
           {review.images.map((img, i) => (
             <div
               key={i}
               style={{
-                width: 'clamp(80px, 20.4vw, 112px)', height: 'clamp(80px, 20.4vw, 112px)', borderRadius: 12, flexShrink: 0,
+                width: 'clamp(80px, 20.4rem, 112px)', height: 'clamp(80px, 20.4rem, 112px)', borderRadius: 12, flexShrink: 0,
                 backgroundColor: '#FFF', border: '1px solid #FFEDD5',
                 overflow: 'hidden',
               }}
             >
               <img
                 src={img}
-                alt={`Фото ${i + 1}`}
+                alt={t('photo_alt', { n: i + 1 })}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 loading="lazy"
               />
@@ -293,8 +289,8 @@ function ReviewCard({ review }: { review: Review }) {
       {/* ── Footer: verified + like ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
         {isVerified ? (
-          <span style={{ fontSize: 'clamp(10px, 2.6vw, 14px)', fontWeight: 600, color: '#10B981' }}>
-            Проверенный покупатель
+          <span style={{ fontSize: 'clamp(10px, 2.6rem, 14px)', fontWeight: 600, color: '#10B981' }}>
+            {t('reviews_verified_buyer')}
           </span>
         ) : (
           <div />
@@ -310,7 +306,7 @@ function ReviewCard({ review }: { review: Review }) {
           <span
             className="icon-material"
             style={{
-              fontSize: 'clamp(20px, 5.1vw, 28px)',
+              fontSize: 'clamp(20px, 5.1rem, 28px)',
               color: liked ? '#EF4444' : '#94A3B8',
               fontVariationSettings: liked ? "'FILL' 1" : "'FILL' 0",
             }}
@@ -319,11 +315,11 @@ function ReviewCard({ review }: { review: Review }) {
           </span>
           <span
             style={{
-              fontSize: 'clamp(13px, 3.3vw, 18px)', fontWeight: 600,
+              fontSize: 'clamp(13px, 3.3rem, 18px)', fontWeight: 600,
               color: liked ? '#EF4444' : '#94A3B8',
             }}
           >
-            {displayLikes === 0 && !liked ? 'Полезно' : displayLikes}
+            {displayLikes === 0 && !liked ? t('reviews_useful') : displayLikes}
           </span>
         </button>
       </div>
@@ -338,66 +334,21 @@ interface Props {
 }
 
 export default function ReviewsSheet({ onClose }: Props) {
-  const { reviews } = useReviewsStore();
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<FilterMode>('most_liked');
+  const t = useT();
+  const sheetRef = useSwipeToClose(onClose);
+  const { reviews, stats, searchQuery, filter, setSearchQuery, setFilter, fetchMoreReviews, isLoadingMore } = useReviewsStore();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const sheetRef = useRef<HTMLDivElement>(null);
 
-  // Lock body scroll
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
 
-  // Escape key
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
+  useLockBodyScroll();
+  const handleOverlayClick = useOverlayClose(onClose);
 
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose],
-  );
-
-  // Filter + search logic
-  const filtered = useMemo(() => {
-    let result = [...reviews];
-
-    // Search
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      result = result.filter((r) => {
-        const userName = (r.user?.full_name ?? r.guest_name ?? '').toLowerCase();
-        const text = (r.text || '').toLowerCase();
-        return text.includes(q) || userName.includes(q);
-      });
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop <= clientHeight + 50) {
+      fetchMoreReviews();
     }
-
-    // Filter
-    switch (filter) {
-      case 'positive':
-        result = result.filter((r) => r.rating >= 4);
-        break;
-      case 'negative':
-        result = result.filter((r) => r.rating <= 3);
-        break;
-      case 'most_liked':
-        result.sort((a, b) => (b.likes - a.likes) || (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-        break;
-      case 'recent':
-        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-    }
-
-    return result;
-  }, [reviews, search, filter]);
+  };
 
   return createPortal(
     <div
@@ -419,8 +370,8 @@ export default function ReviewsSheet({ onClose }: Props) {
         {/* ── Header ── */}
         <div className="flex-between" style={{ padding: '16px 16px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <h2 style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
-              Отзывы
+            <h2 style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
+              {t('reviews_title')}
             </h2>
             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
           </div>
@@ -428,12 +379,12 @@ export default function ReviewsSheet({ onClose }: Props) {
             className="btn-reset flex-center"
             onClick={onClose}
             style={{
-              width: 'clamp(36px, 9.2vw, 50px)', height: 'clamp(36px, 9.2vw, 50px)', borderRadius: '50%',
-              backgroundColor: '#F1F5F9',
+              width: 'clamp(36px, 9.2rem, 50px)', height: 'clamp(36px, 9.2rem, 50px)', borderRadius: '50%',
+              backgroundColor: '#E2E8F0',
             }}
           >
             <span className="icon-material" style={{
-              fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#64748B',
+              fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#64748B',
               fontVariationSettings: "'FILL' 0",
             }}>
               close
@@ -442,9 +393,9 @@ export default function ReviewsSheet({ onClose }: Props) {
         </div>
 
         {/* ── Scrollable content ── */}
-        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }} onScroll={handleScroll}>
           {/* Stats */}
-          <StatsCard reviews={reviews} />
+          <StatsCard stats={stats} />
 
           {/* Search & Filter bar */}
           <div style={{ padding: '0 16px 16px', display: 'flex', gap: 10 }}>
@@ -457,32 +408,32 @@ export default function ReviewsSheet({ onClose }: Props) {
               }}
             >
               <span className="icon-material" style={{
-                fontSize: 'clamp(22px, 5.6vw, 32px)', color: '#545454',
+                fontSize: 'clamp(22px, 5.6rem, 32px)', color: '#545454',
                 fontVariationSettings: "'FILL' 0",
               }}>
                 search
               </span>
               <input
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Поиск по отзывам"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('reviews_search_placeholder')}
                 style={{
                   flex: 1, border: 'none', outline: 'none',
-                  fontSize: 'clamp(15px, 3.8vw, 21px)', fontWeight: 500, color: '#0F172A',
+                  fontSize: 'clamp(15px, 3.8rem, 21px)', fontWeight: 500, color: '#0F172A',
                   backgroundColor: 'transparent', fontFamily: "'Outfit', sans-serif",
                 }}
               />
-              {search && (
+              {searchQuery && (
                 <button
-                  onClick={() => setSearch('')}
+                  onClick={() => setSearchQuery('')}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     padding: '0 16px', display: 'flex',
                   }}
                 >
                   <span className="icon-material" style={{
-                    fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#9E9E9E',
+                    fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#9E9E9E',
                   }}>
                     close
                   </span>
@@ -496,12 +447,12 @@ export default function ReviewsSheet({ onClose }: Props) {
                 className="btn-reset flex-center"
                 onClick={() => setShowFilterMenu(!showFilterMenu)}
                 style={{
-                  width: 'clamp(48px, 12.2vw, 67px)', height: 'clamp(48px, 12.2vw, 67px)', borderRadius: '50%',
+                  width: 'clamp(48px, 12.2rem, 67px)', height: 'clamp(48px, 12.2rem, 67px)', borderRadius: '50%',
                   backgroundColor: '#1E293B',
                 }}
               >
                 <span className="icon-material" style={{
-                  fontSize: 'clamp(22px, 5.6vw, 32px)', color: '#FFF',
+                  fontSize: 'clamp(22px, 5.6rem, 32px)', color: '#FFF',
                   fontVariationSettings: "'FILL' 0",
                 }}>
                   tune
@@ -524,7 +475,7 @@ export default function ReviewsSheet({ onClose }: Props) {
                       overflow: 'hidden', minWidth: 200,
                     }}
                   >
-                    {(Object.entries(FILTER_LABELS) as [FilterMode, string][]).map(([key, label]) => (
+                    {(Object.entries(FILTER_LABEL_KEYS) as [FilterMode, TranslationKey][]).map(([key, transKey]) => (
                       <button
                         key={key}
                         className="btn-reset"
@@ -534,12 +485,12 @@ export default function ReviewsSheet({ onClose }: Props) {
                         }}
                         style={{
                           display: 'block', width: '100%', padding: '12px 16px',
-                          fontSize: 'clamp(15px, 3.8vw, 21px)', fontWeight: filter === key ? 700 : 500,
+                          fontSize: 'clamp(15px, 3.8rem, 21px)', fontWeight: filter === key ? 700 : 500,
                           color: filter === key ? '#C27A3E' : '#1E293B',
                           textAlign: 'left',
                         }}
                       >
-                        {label}
+                        {t(transKey)}
                       </button>
                     ))}
                   </div>
@@ -550,24 +501,31 @@ export default function ReviewsSheet({ onClose }: Props) {
 
           {/* ── Review cards ── */}
           <div style={{ padding: '0 16px 120px' }}>
-            {filtered.length === 0 ? (
+            {reviews.length === 0 ? (
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 padding: '40px 0', gap: 12,
               }}>
                 <span className="icon-material" style={{
-                  fontSize: 'clamp(52px, 13.3vw, 73px)', color: '#CBD5E1',
+                  fontSize: 'clamp(52px, 13.3rem, 73px)', color: '#CBD5E1',
                 }}>
                   chat_bubble_outline
                 </span>
-                <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 600, color: '#94A3B8' }}>
-                  Нет отзывов
+                <span style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 600, color: '#94A3B8' }}>
+                  {t('reviews_no_reviews')}
                 </span>
               </div>
             ) : (
-              filtered.map((review) => (
-                <ReviewCard key={review.id} review={review} />
-              ))
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {reviews.map((review) => (
+                  <ReviewCard key={review.id} review={review} />
+                ))}
+                {isLoadingMore && (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0 32px' }}>
+                    <span className="icon-material animate-spin" style={{ color: '#94A3B8', fontSize: 32 }}>autorenew</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

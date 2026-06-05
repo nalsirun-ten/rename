@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "dentapp-18e25"
+  },
+  "targets": {
+    "dentapp-18e25": {
+      "hosting": {
+        "app": [
+          "dentapp-18e25"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

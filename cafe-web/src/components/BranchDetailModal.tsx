@@ -1,290 +1,383 @@
-import React, { useState, useEffect } from 'react';
-import { useBranchesStore, type Branch } from '../stores/branches';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useBranchesStore } from '../stores/branches';
+import { useSettingsStore } from '../stores/settings';
+import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
+import { useT } from '../i18n/useT';
+import type { TranslationKey } from '../i18n/translations';
+import { useOverlayClose } from '../hooks/useOverlayClose';
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
+const WEEKDAY_KEYS: TranslationKey[] = [
+  'weekday_mon', 'weekday_tue', 'weekday_wed', 'weekday_thu',
+  'weekday_fri', 'weekday_sat', 'weekday_sun',
+];
+const WEEKDAY_ENGLISH_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 export default function BranchDetailModal() {
   const { branches, activeBranchId, closeBranch } = useBranchesStore();
+  const { get, fetchSettings } = useSettingsStore();
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  const t = useT();
   const [isHoursExpanded, setIsHoursExpanded] = useState(false);
   const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const phoneFormatted = get('contact_phone') || '+7 (999) 123-45-67';
+  const phoneRaw = phoneFormatted.replace(/[^\d+]/g, '');
+
+  const handleCopyPhone = async () => {
+    try {
+      await navigator.clipboard.writeText(phoneRaw);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // fallback
+    }
+  };
 
   // Reset states when modal changes
   useEffect(() => {
     if (activeBranchId) {
       setIsHoursExpanded(false);
       setIsRouteModalOpen(false);
+      setCopied(false);
     }
   }, [activeBranchId]);
+
+  const handleOverlay = useOverlayClose(closeBranch, !!activeBranchId);
 
   if (!activeBranchId) return null;
 
   const branch = branches.find((b) => b.id === activeBranchId);
   if (!branch) return null;
 
-  // The bottom sheet background overlay
+  const lat = branch.latitude || 42.8746;
+  const lng = branch.longitude || 74.5698;
+
+  const bishkekTimeString = new Date().toLocaleString("en-US", { timeZone: "Asia/Bishkek" });
+  const bishkekDate = new Date(bishkekTimeString);
+  const todayIndex = bishkekDate.getDay() === 0 ? 6 : bishkekDate.getDay() - 1;
+
+  const getScheduleString = (idx: number) => {
+    const key = WEEKDAY_ENGLISH_KEYS[idx];
+    const val = branch.weeklySchedule?.[key];
+    if (val && val.trim().length > 0) return val;
+    return `${branch.openTime} - ${branch.closeTime}`;
+  };
+  const todayScheduleString = getScheduleString(todayIndex);
+
   return (
-    <div style={{
+    <div className="rs-overlay" onClick={handleOverlay} style={{
       position: 'absolute',
       top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.4)',
+      backgroundColor: 'rgba(0,0,0,0.5)',
       zIndex: 1000,
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'flex-end',
     }}>
-      {/* Click outside to close */}
-      <div style={{ flex: 1 }} onClick={closeBranch} />
-
-      {/* Main Bottom Sheet */}
-      <div style={{
-        backgroundColor: '#F8FAFC',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+      {/* Main Bottom Sheet — auto‑sized to content, capped at 94vh */}
+      <div className="rs-sheet sheet-base" style={{
+        backgroundColor: '#FFF',
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: '90%',
+        maxHeight: '94vh',
+        overflow: 'hidden',
+        position: 'relative',
+        width: '100%',
       }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '24px 16px 16px', flexShrink: 0 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-              <h2 style={{ fontSize: 'clamp(22px, 5.6vw, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
-                {branch.title}
-              </h2>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: branch.isOpen ? '#22C55E' : '#EF4444', marginRight: 6 }} />
-              <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 600, color: branch.isOpen ? '#22C55E' : '#EF4444' }}>
-                {branch.isOpen ? 'Открыто' : 'Закрыто'}
-              </span>
-            </div>
-          </div>
+        {/* Top Map Section */}
+        <div style={{ position: 'relative', height: '42vh', width: '100%', flexShrink: 0 }}>
+          {GOOGLE_MAPS_API_KEY ? (
+            <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+              <Map
+                defaultCenter={{ lat, lng }}
+                defaultZoom={14}
+                mapId="DEMO_MAP_ID"
+                id="detail-map"
+                colorScheme="LIGHT"
+                keyboardShortcuts={false}
+                disableDefaultUI={true}
+                gestureHandling="greedy"
+                style={{ width: '100%', height: '100%' }}
+              >
+                <AdvancedMarker position={{ lat, lng }}>
+                  {/* Custom Tear-drop Marker */}
+                  <div style={{
+                    width: 48, height: 48,
+                    backgroundColor: '#3b2f2f',
+                    borderRadius: '50% 50% 50% 0',
+                    transform: 'rotate(-45deg)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                    border: '2px solid #FFF',
+                    position: 'relative'
+                  }}>
+                    <span className="icon-material" style={{ 
+                      color: '#FFF', 
+                      fontSize: 24,
+                      transform: 'rotate(45deg)' 
+                    }}>
+                      local_cafe
+                    </span>
+                    
+                    {/* Small Green Dot at the top-right of the marker */}
+                    {branch.isOpen && (
+                      <div style={{
+                        position: 'absolute', top: -2, right: -2,
+                        width: 14, height: 14, backgroundColor: '#22C55E',
+                        borderRadius: '50%', border: '2px solid #FFF',
+                        transform: 'rotate(45deg)'
+                      }} />
+                    )}
+                  </div>
+                </AdvancedMarker>
+              </Map>
+            </APIProvider>
+          ) : (
+            <div style={{ width: '100%', height: '100%', backgroundColor: '#E2E8F0' }} />
+          )}
+
+          {/* Close Button Overlay */}
           <button 
             onClick={closeBranch}
             className="btn-reset flex-center"
-            style={{ width: 'clamp(36px, 9.2vw, 50px)', height: 'clamp(36px, 9.2vw, 50px)', borderRadius: '50%', backgroundColor: '#F1F5F9' }}
+            style={{ 
+              position: 'absolute', top: 16, right: 16, 
+              width: 36, height: 36, borderRadius: '50%', 
+              backgroundColor: '#1E293B', color: '#FFF',
+              zIndex: 10
+            }}
           >
-            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
+            <span className="icon-material" style={{ fontSize: 20 }}>close</span>
           </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '0 16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
-        {/* Map placeholder */}
-        <div style={{ 
-          height: 'clamp(180px, 46vw, 260px)', 
-          backgroundColor: '#E2E8F0', 
-          borderRadius: 16, 
-          marginBottom: 20,
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundImage: 'url("https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=600&h=300")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+        {/* Scrollable Details Section */}
+        <div style={{
+          flexShrink: 0, overflowY: 'auto', maxHeight: 'calc(94vh - 42vh)',
+          backgroundColor: '#FFF',
+          padding: '24px 16px',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)'
         }}>
-          {/* Map Pin */}
-          <div style={{
-            width: 50, height: 60,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))'
-          }}>
-            <svg width="48" height="60" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 0C5.372 0 0 5.372 0 12c0 8.5 12 18 12 18s12-9.5 12-18c0-6.628-5.372-12-12-12z" fill="#EF4444"/>
-              <circle cx="12" cy="12" r="6" fill="white"/>
-            </svg>
-          </div>
-          <div style={{
-            position: 'absolute', bottom: 8, right: 8,
-            backgroundColor: 'rgba(255,255,255,0.9)', padding: '2px 6px', borderRadius: 4,
-            fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 700, color: '#1E293B'
-          }}>
-            Яндекс Карты
-          </div>
-        </div>
-
-        {/* Address */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 16 }}>
-          <div style={{ width: 'clamp(44px, 11vw, 64px)', height: 'clamp(44px, 11vw, 64px)', borderRadius: 12, backgroundColor: '#E0F2E9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 12, flexShrink: 0 }}>
-            <span className="icon-material" style={{ color: '#1B5E3D', fontSize: 'clamp(24px, 6vw, 32px)' }}>location_on</span>
-          </div>
-          <div>
-            <div style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', color: '#64748B', fontWeight: 500, marginBottom: 2 }}>Адрес</div>
-            <div style={{ fontSize: 'clamp(16px, 4vw, 22px)', color: '#1E293B', fontWeight: 600 }}>{branch.address}</div>
-          </div>
-        </div>
-
-        {/* Working Hours */}
-        <div 
-          style={{ display: 'flex', flexDirection: 'column', marginBottom: 16, cursor: 'pointer' }}
-          onClick={() => setIsHoursExpanded(!isHoursExpanded)}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-            <div style={{ width: 'clamp(44px, 11vw, 64px)', height: 'clamp(44px, 11vw, 64px)', borderRadius: 12, backgroundColor: '#E0F2E9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 12, flexShrink: 0 }}>
-              <span className="icon-material" style={{ color: '#1B5E3D', fontSize: 'clamp(24px, 6vw, 32px)' }}>schedule</span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', color: '#64748B', fontWeight: 500, marginBottom: 2 }}>Время работы</div>
-              <div style={{ fontSize: 'clamp(16px, 4vw, 22px)', color: '#1E293B', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Сегодня: {branch.openTime} - {branch.closeTime}</span>
-                <span className="icon-material" style={{ color: '#64748B', transition: 'transform 0.2s', transform: isHoursExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                  expand_more
-                </span>
+          {/* Header Row: Text Info + Image */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+            <div style={{ flex: 1, paddingRight: 16 }}>
+              <h2 style={{ fontSize: 'clamp(20px, 5.5rem, 26px)', fontWeight: 700, color: '#3B82F6', margin: 0, marginBottom: 8 }}>
+                {branch.title}
+              </h2>
+              <div style={{ fontSize: 'clamp(16px, 4.2rem, 18px)', color: '#1E293B', fontWeight: 600, marginBottom: 4 }}>
+                {branch.address}
+              </div>
+              <div style={{ fontSize: 'clamp(14px, 3.8rem, 16px)', color: '#1E293B', fontWeight: 500, marginBottom: 4 }}>
+                {t('branch_city')}
+              </div>
+              <div style={{ fontSize: 'clamp(14px, 3.8rem, 16px)', color: '#94A3B8', fontWeight: 500 }}>
+                {branch.type}
               </div>
             </div>
+            
+            <div style={{ 
+              width: 110, height: 110, 
+              borderRadius: 20, 
+              backgroundColor: '#F1F5F9',
+              overflow: 'hidden',
+              flexShrink: 0
+            }}>
+              <img
+                src={branch.imageUrl}
+                alt={branch.title}
+                loading="lazy"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
           </div>
-          
-          {/* Expanded Hours */}
+
+
+
+          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 20px 0' }} />
+
+          {/* Today's Hours (Expandable) */}
+          <div 
+            onClick={() => setIsHoursExpanded(!isHoursExpanded)}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isHoursExpanded ? 16 : 20, cursor: 'pointer' }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>
+              {t('branch_today')} {todayScheduleString}
+            </div>
+            <span className="icon-material" style={{ color: '#1E293B', transition: 'transform 0.2s', transform: isHoursExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+              expand_more
+            </span>
+          </div>
+
           {isHoursExpanded && (
-            <div style={{ marginLeft: 56, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'].map((day, idx) => (
-                <div key={day} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 'clamp(15px, 3.8vw, 21px)', color: idx === 0 ? '#1E293B' : '#64748B', fontWeight: idx === 0 ? 700 : 500 }}>
-                    {day}
+            <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {WEEKDAY_KEYS.map((key, idx) => (
+                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 15, color: idx === todayIndex ? '#1E293B' : '#64748B', fontWeight: idx === todayIndex ? 700 : 500 }}>
+                    {t(key)}
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 'clamp(15px, 3.8vw, 21px)', color: '#1E293B', fontWeight: 500 }}>
-                      {branch.openTime} - {branch.closeTime}
-                    </span>
-                    {idx === 0 && (
-                      <span style={{ backgroundColor: '#E0F2E9', color: '#1B5E3D', fontSize: 'clamp(11px, 2.8vw, 15px)', fontWeight: 700, padding: '2px 8px', borderRadius: 12 }}>
-                        Сегодня
-                      </span>
-                    )}
-                  </div>
+                  <span style={{ fontSize: 15, color: '#1E293B', fontWeight: 500 }}>
+                    {getScheduleString(idx)}
+                  </span>
                 </div>
               ))}
             </div>
           )}
-        </div>
 
-        {/* Phone */}
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
-          <div style={{ width: 'clamp(44px, 11vw, 64px)', height: 'clamp(44px, 11vw, 64px)', borderRadius: 12, backgroundColor: '#E0F2E9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 12, flexShrink: 0 }}>
-            <span className="icon-material" style={{ color: '#1B5E3D', fontSize: 'clamp(24px, 6vw, 32px)' }}>call</span>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', color: '#64748B', fontWeight: 500, marginBottom: 2 }}>Телефон</div>
-            <div style={{ fontSize: 'clamp(16px, 4vw, 22px)', color: '#1E293B', fontWeight: 600 }}>+996555987654</div>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-reset flex-center" style={{ width: 'clamp(44px, 11vw, 64px)', height: 'clamp(44px, 11vw, 64px)', borderRadius: '50%', backgroundColor: '#25D366', color: '#FFF' }}>
-              {/* WhatsApp icon placeholder */}
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-              </svg>
-            </button>
-            <button className="btn-reset flex-center" style={{ width: 'clamp(44px, 11vw, 64px)', height: 'clamp(44px, 11vw, 64px)', borderRadius: '50%', backgroundColor: '#3B82F6', color: '#FFF' }}>
-              <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)' }}>call</span>
-            </button>
-          </div>
-        </div>
+          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 20px 0' }} />
 
-        {/* Build Route Button */}
-        <button 
-          onClick={() => setIsRouteModalOpen(true)}
-          className="btn-reset"
-          style={{
-            backgroundColor: '#EFF6FF',
-            color: '#3B82F6',
-            borderRadius: 16,
-            padding: '16px',
-            fontSize: 'clamp(16px, 4vw, 22px)',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '2px solid #3B82F6',
-          }}
-        >
-          <span className="icon-material" style={{ marginRight: 8, fontSize: 'clamp(20px, 5.1vw, 28px)' }}>directions</span>
-          Построить маршрут
-        </button>
+          {/* Phone */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: '#1E293B' }}>
+                {phoneFormatted}
+              </span>
+              <button 
+                className="btn-reset flex-center" 
+                onClick={handleCopyPhone}
+                style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: copied ? '#DCFCE7' : '#F1F5F9', transition: 'background-color 0.2s' }}
+              >
+                <span className="icon-material" style={{ fontSize: 16, color: copied ? '#22C55E' : '#94A3B8' }}>
+                  {copied ? 'check' : 'content_copy'}
+                </span>
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button 
+                className="btn-reset flex-center" 
+                onClick={() => window.location.href = `https://wa.me/${phoneRaw.replace('+', '')}`} 
+                style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#25D366', color: '#FFF' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                </svg>
+              </button>
+              <button 
+                className="btn-reset flex-center" 
+                onClick={() => window.location.href = `tel:${phoneRaw}`} 
+                style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#3B82F6', color: '#FFF' }}
+              >
+                <span className="icon-material" style={{ fontSize: 20 }}>call</span>
+              </button>
+            </div>
+          </div>
+
+          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 20px 0' }} />
+
+          {/* Route */}
+          <div 
+            onClick={() => setIsRouteModalOpen(true)}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>
+              {t('branch_route')}
+            </div>
+            <span className="icon-material" style={{ color: '#1E293B', fontSize: 24 }}>route</span>
+          </div>
         </div>
       </div>
 
       {/* Nested Route Modal */}
       {isRouteModalOpen && (
-        <div style={{
-          position: 'absolute',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 1010,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-        }}>
-          <div style={{ flex: 1 }} onClick={() => setIsRouteModalOpen(false)} />
-          <div style={{
-            backgroundColor: '#FEF9F5',
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            padding: '24px 16px',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
-            display: 'flex',
-            flexDirection: 'column',
-          }}>
+        <RouteModal branch={branch} lat={lat} lng={lng} onClose={() => setIsRouteModalOpen(false)} t={t} />
+      )}
+    </div>
+  );
+}
+
+function RouteModal({ branch, lat, lng, onClose, t }: any) {
+  const handleOverlay = useOverlayClose(onClose);
+  return (
+    <div className="rs-overlay" onClick={handleOverlay} style={{
+      position: 'absolute',
+      top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      zIndex: 1010,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-end',
+    }}>
+      <div className="rs-sheet sheet-base" style={{
+        backgroundColor: '#FFF',
+        padding: '24px 16px',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+      }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
-                <h3 style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', fontWeight: 800, color: '#1E293B', marginBottom: 4 }}>Построить маршрут</h3>
-                <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', color: '#64748B', fontWeight: 500 }}>{branch.title}</span>
+                <h3 style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 800, color: '#1E293B', marginBottom: 4 }}>{t('branch_build_route')}</h3>
+                <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', color: '#64748B', fontWeight: 500 }}>{branch.title}</span>
               </div>
               <button 
-                onClick={() => setIsRouteModalOpen(false)}
+                onClick={onClose}
                 className="btn-reset flex-center"
-                style={{ width: 'clamp(36px, 9.2vw, 50px)', height: 'clamp(36px, 9.2vw, 50px)', borderRadius: '50%', backgroundColor: '#F1F5F9' }}
+                style={{ width: 'clamp(36px, 9.2rem, 50px)', height: 'clamp(36px, 9.2rem, 50px)', borderRadius: '50%', backgroundColor: '#E2E8F0' }}
               >
-                <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
+                <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
               </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Google Maps */}
-              <button className="btn-reset" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
-              }}>
+              <button 
+                className="btn-reset" 
+                onClick={() => window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 40, height: 40, marginRight: 12, backgroundColor: '#EA4335', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ color: '#fff', fontWeight: 'bold' }}>G</span>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                    <img src="/map2.png" alt="Google Maps" style={{ width: 32, height: 32, objectFit: 'contain' }} />
                   </div>
-                  <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 700, color: '#1E293B' }}>Google Maps</span>
+                  <span style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 700, color: '#1E293B' }}>Google Maps</span>
                 </div>
                 <span className="icon-material" style={{ color: '#94A3B8' }}>chevron_right</span>
               </button>
               
-              {/* 2GIS */}
-              <button className="btn-reset" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
-              }}>
+              <button 
+                className="btn-reset" 
+                onClick={() => window.location.href = `https://2gis.ru/routeSearch/rsType/car/to/${lng},${lat}`}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 40, height: 40, marginRight: 12, backgroundColor: '#22C55E', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ color: '#fff', fontWeight: 'bold' }}>2</span>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                    <img src="/map1.png" alt="2GIS" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6 }} />
                   </div>
-                  <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 700, color: '#1E293B' }}>2GIS</span>
+                  <span style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 700, color: '#1E293B' }}>2GIS</span>
                 </div>
                 <span className="icon-material" style={{ color: '#94A3B8' }}>chevron_right</span>
               </button>
 
-              {/* Yandex Maps */}
-              <button className="btn-reset" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
-              }}>
+              <button 
+                className="btn-reset" 
+                onClick={() => window.location.href = `https://yandex.ru/maps/?rtext=~${lat},${lng}`}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 40, height: 40, marginRight: 12, backgroundColor: '#EF4444', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ color: '#fff', fontWeight: 'bold' }}>Я</span>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                    <img src="/map3.png" alt="Yandex Maps" style={{ width: 32, height: 32, objectFit: 'contain' }} />
                   </div>
-                  <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 700, color: '#1E293B' }}>Яндекс.Карты</span>
+                  <span style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 700, color: '#1E293B' }}>Яндекс.Карты</span>
                 </div>
                 <span className="icon-material" style={{ color: '#94A3B8' }}>chevron_right</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

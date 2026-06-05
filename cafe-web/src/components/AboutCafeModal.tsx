@@ -1,27 +1,25 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { useOverlayClose } from '../hooks/useOverlayClose';
 
 interface Props {
   onClose: () => void;
 }
 
 export default function AboutCafeModal({ onClose }: Props) {
-  const sheetRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useSwipeToClose(onClose);
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
+  useLockBodyScroll();
 
-  const handleOverlay = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
-  }, [onClose]);
+  const handleOverlay = useOverlayClose(onClose);
 
   return createPortal(
-    <div className="overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
+    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
       <div 
         ref={sheetRef}
-        className="sheet-base flex-col" 
+        className="rs-sheet sheet-base flex-col" 
         style={{ 
           maxHeight: '90vh',
           display: 'flex',

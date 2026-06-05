@@ -1,36 +1,103 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useProfileStore } from '../stores/profile';
-import AboutCafeModal from '../components/AboutCafeModal';
+import { supabase } from '../lib/supabase';
 import EditProfileModal from '../components/EditProfileModal';
-import AboutAppModal from '../components/AboutAppModal';
-import FAQModal from '../components/FAQModal';
 import LanguageModal from '../components/LanguageModal';
+import { useT } from '../i18n/useT';
+import { useToastStore } from '../stores/toast';
 
-const MENU_ITEMS = [
-  { icon: 'local_cafe', label: 'О кофейне', color: '#3B82F6', bg: '#EFF6FF' },
-  { icon: 'code', label: 'О разработчике', color: '#8B5CF6', bg: '#F5F3FF' },
-  { icon: 'help', label: 'Вопросы и ответы', color: '#EAB308', bg: '#FEFCE8' },
-  { icon: 'share', label: 'Поделиться приложением', color: '#10B981', bg: '#ECFDF5' },
-  { icon: 'info', label: 'О приложении', color: '#8B5CF6', bg: '#F5F3FF' },
-];
+import { clearAuthData } from '../App';
+import { useLanguageStore } from '../stores/language';
+import { useNavigationStore } from '../stores/navigation';
+import { useMenuStore } from '../stores/menu';
+import { useReviewsStore } from '../stores/reviews';
+
+// ─── Lazy modals — loaded in background after ProfilePage opens ───
+const AboutCafeModal = lazy(() => import('../components/AboutCafeModal'));
+const AboutAppModal = lazy(() => import('../components/AboutAppModal'));
+const AboutDeveloperModal = lazy(() => import('../components/AboutDeveloperModal'));
+const FAQModal = lazy(() => import('../components/FAQModal'));
+const VacanciesModal = lazy(() => import('../components/VacanciesModal'));
+const ConfirmLogoutModal = lazy(() => import('../components/ConfirmLogoutModal'));
 
 export default function ProfilePage() {
-  const { name, phone, photo } = useProfileStore();
+  const { name, phone, photo, visits, loyaltyNumber } = useProfileStore();
+  const t = useT();
+  const { language } = useLanguageStore();
+  const activeTab = useNavigationStore((s) => s.activeTab);
+  const lastProfileRefresh = useRef(0);
+
+  // ─── Prefetch lazy modals in background — after page opens ───
+  useEffect(() => {
+    import('../components/AboutCafeModal');
+    import('../components/AboutAppModal');
+    import('../components/AboutDeveloperModal');
+    import('../components/FAQModal');
+    import('../components/VacanciesModal');
+    import('../components/ConfirmLogoutModal');
+  }, []);
+
+  // Refresh private data when user switches to this tab (with 30s cooldown)
+  useEffect(() => {
+    if (activeTab !== 3) return;
+    if (Date.now() - lastProfileRefresh.current < 30_000) return;
+    lastProfileRefresh.current = Date.now();
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        useProfileStore.getState().fetchProfile(session.user.id);
+        useMenuStore.getState().fetchFavorites(session.user.id);
+        useReviewsStore.getState().fetchLikedReviews(session.user.id);
+      }
+    });
+  }, [activeTab]);
+
+  const getFlag = () => {
+    if (language === 'en') return '🇬🇧';
+    if (language === 'kg') return '🇰🇬';
+    return '🇷🇺';
+  };
   const [isAboutCafeOpen, setIsAboutCafeOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isAboutAppOpen, setIsAboutAppOpen] = useState(false);
+  const [isAboutDeveloperOpen, setIsAboutDeveloperOpen] = useState(false);
   const [isFAQOpen, setIsFAQOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [isVacanciesOpen, setIsVacanciesOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
-  const handleShareApp = () => {
+  useEffect(() => {
+    // getSession is cached/synchronous — no network call unlike getUser()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) setUserEmail(session.user.email);
+    });
+  }, []);
+
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShareApp = async () => {
+    if (isSharing) return;
     if (navigator.share) {
-      navigator.share({
-        title: 'Cafe',
-        text: 'Попробуйте Cafe — удобное приложение для любителей кофе! ☕',
-        url: window.location.origin
-      }).catch(console.error);
+      setIsSharing(true);
+      try {
+        await navigator.share({
+          title: 'Green Chicken',
+          text: t('profile_share_text'),
+          url: window.location.origin
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      } finally {
+        setIsSharing(false);
+      }
     } else {
-      alert('Попробуйте Cafe — удобное приложение для любителей кофе! ☕');
+      try {
+        await navigator.clipboard.writeText(window.location.origin);
+        useToastStore.getState().showToast('Ссылка скопирована', 'success');
+      } catch {
+        useToastStore.getState().showToast(t('profile_share_text'), 'info', 5000);
+      }
     }
   };
   const firstLetter = name.charAt(0).toUpperCase() || '?';
@@ -40,37 +107,64 @@ export default function ProfilePage() {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      backgroundColor: '#FEF9F5', // Light cream background
+      backgroundColor: '#1B5E3D',
       overflowY: 'auto',
       WebkitOverflowScrolling: 'touch',
     }}>
       {/* ─── Header ─── */}
       <div style={{
-        padding: 'calc(env(safe-area-inset-top, 0px) + 24px) 16px 32px 16px',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: 14,
+        position: 'relative',
       }}>
-        {/* Title */}
-        <div style={{ marginBottom: 32 }}>
-          <span style={{ fontSize: 'clamp(24px, 6.1vw, 34px)', fontWeight: 800, color: '#0F172A' }}>
-            Профиль
-          </span>
-        </div>
+        <span style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 700, color: '#FFF' }}>
+          {t('profile_title')}
+        </span>
+      </div>
 
-        {/* Minimalist Profile Info */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 16
-        }}>
+      {/* ─── Profile Info (Horizontal Card Component) ─── */}
+      <div style={{ padding: '0 16px', marginBottom: 10 }}>
+        <div
+          style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            height: 'clamp(96px, 28.7rem, 130px)',
+            background: 'linear-gradient(to bottom right, #6A11CB, #2575FC)',
+            border: '1px solid #000',
+            borderRadius: 28,
+            padding: 16
+          }}
+        >
+          {/* 3D Robot Image */}
+          <img
+            src="/robot_3d.png"
+            alt="Robot 3D"
+            style={{
+              position: 'absolute',
+              right: 0,
+              bottom: 0,
+              height: 'clamp(128px, 38.5rem, 175px)',
+              objectFit: 'contain',
+              pointerEvents: 'none',
+              zIndex: 10
+            }}
+          />
+
+          {/* Avatar */}
           <div className="flex-center" style={{
-            width: 72,
-            height: 72,
+            position: 'relative',
+            zIndex: 2,
+            width: 'clamp(68px, 20.5rem, 95px)',
+            height: 'clamp(68px, 20.5rem, 95px)',
             borderRadius: '50%',
-            backgroundColor: '#1B5E3D', // Brand Dark Green
-            color: '#FFF',
-            fontSize: 'clamp(28px, 7.1vw, 38px)',
-            fontWeight: 800,
+            backgroundColor: '#F59E0B',
+            color: '#FFFFFF',
+            fontSize: 'clamp(28px, 8.7rem, 40px)',
+            fontWeight: 700,
             flexShrink: 0,
-            boxShadow: '0 4px 12px rgba(27, 94, 61, 0.3)',
             overflow: 'hidden'
           }}>
             {photo ? (
@@ -79,143 +173,210 @@ export default function ProfilePage() {
               firstLetter
             )}
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h3 style={{ fontSize: 'clamp(22px, 5.6vw, 32px)', fontWeight: 800, color: '#0F172A', marginBottom: 4, lineHeight: 1.2 }}>
-              {name}
+
+          {/* Name, Phone & Level */}
+          <div style={{ position: 'relative', zIndex: 2, marginLeft: 16, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+            <h3 style={{
+              fontSize: 'clamp(18px, 4.5rem, 22px)',
+              fontWeight: 700,
+              color: '#FFFFFF',
+              margin: '0 0 2px 0',
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}>
+              {name || t('profile_add_name')}
             </h3>
-            <p style={{ fontSize: 'clamp(15px, 3.8vw, 21px)', fontWeight: 500, color: '#64748B' }}>
-              {phone}
-            </p>
+            <span style={{
+              fontSize: 'clamp(13px, 3.3rem, 15px)',
+              fontWeight: 500,
+              color: 'rgba(255, 255, 255, 0.9)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              marginBottom: 4
+            }}>
+              {phone || userEmail || t('guest')}
+            </span>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              marginTop: 2,
+              opacity: 0.85
+            }}>
+              <span className="icon-material" style={{ fontSize: 14, color: '#FCD34D' }}>qr_code_2</span>
+              <span style={{ fontSize: 12, fontWeight: 400, color: '#FFFFFF', letterSpacing: '0.5px' }}>
+                {loyaltyNumber ? `${loyaltyNumber.substring(0, 3)} ${loyaltyNumber.substring(3)}` : '000 000'}
+              </span>
+            </div>
           </div>
-          <button 
-            className="btn-reset flex-center" 
-            onClick={() => setIsEditProfileOpen(true)}
-            style={{
-              width: 40, height: 40, borderRadius: 20, backgroundColor: '#ECFDF5', flexShrink: 0, // Light Green BG
-              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.15)'
-            }}
-          >
-            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#10B981' }}>edit</span>
-          </button>
+
         </div>
       </div>
 
-      {/* ─── Body ─── */}
+      {/* ─── Two Action Cards (Edit Profile & Language) ─── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px', marginTop: 2, marginBottom: 16 }}>
+        <button 
+          className="btn-reset"
+          onClick={() => setIsEditProfileOpen(true)}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: '#22C55E',
+            border: '1px solid #000',
+            borderRadius: 20,
+            padding: '16px 16px',
+            cursor: 'pointer',
+            justifyContent: 'center'
+          }}
+        >
+          <span className="icon-material" style={{ fontSize: 'clamp(18px, 5.1rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1", flexShrink: 0 }}>edit</span>
+          <span style={{ fontSize: 'clamp(13px, 3.3rem, 15px)', fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t('edit')}</span>
+        </button>
+
+        <button 
+          className="btn-reset"
+          onClick={() => setIsLanguageOpen(true)}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: '#3B82F6',
+            border: '1px solid #000',
+            borderRadius: 20,
+            padding: '16px 16px',
+            cursor: 'pointer',
+            justifyContent: 'center'
+          }}
+        >
+          <span style={{ fontSize: 'clamp(15px, 4.6rem, 22px)', flexShrink: 0 }}>{getFlag()}</span>
+          <span style={{ fontSize: 'clamp(13px, 3.3rem, 15px)', fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t('language')}</span>
+        </button>
+      </div>
+      {/* ─── Body (Bottom White Section) ─── */}
       <div style={{
         flex: 1,
-        padding: '0 16px 100px 16px',
+        backgroundColor: '#FEF9F5',
+        borderTopLeftRadius: 36,
+        borderTopRightRadius: 36,
+        boxShadow: '0 -4px 16px 2px rgba(0,0,0,0.06)',
+        padding: '16px 16px 100px 16px',
         display: 'flex',
         flexDirection: 'column',
       }}>
-        
-        {/* Quick Actions (Theme, Language) */}
-        <div style={{
-          backgroundColor: '#FFF',
-          borderRadius: 16,
-          padding: '4px 16px',
-          marginBottom: 24,
-        }}>
-          {/* Language */}
-          <button 
-            className="btn-reset" 
-            onClick={() => setIsLanguageOpen(true)}
-            style={{
-              display: 'flex', alignItems: 'center', width: '100%', padding: '12px 0', borderBottom: '1px solid #F1F5F9'
-            }}
-          >
-            <div className="flex-center" style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#ECFDF5', marginRight: 12 }}>
-               <span style={{ fontSize: 'clamp(16px, 4vw, 22px)' }}>🇷🇺</span>
+        {/* Settings Block ─── */}
+        <div style={{ marginBottom: 32 }}>
+          {/* Title & Dot */}
+          <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 8 }}>
+            <h2 style={{ fontSize: 'clamp(18px, 4.8rem, 24px)', fontWeight: 800, color: '#1E293B', marginRight: 8, marginTop: 0, marginBottom: 0 }}>
+              {t('profile_personal_cabinet')}
+            </h2>
+            <div style={{ 
+              width: 8, 
+              height: 8, 
+              borderRadius: '50%', 
+              backgroundColor: '#22C55E',
+              boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)'
+            }} />
+          </div>
+
+          
+          <button className="btn-reset" onClick={() => setIsAboutCafeOpen(true)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #CBD5E1' }}>
+            <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#3B82F6', marginRight: 12 }}>
+              <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>local_cafe</span>
             </div>
-            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 500, color: '#0F172A' }}>Язык</span>
-            <span style={{ fontSize: 'clamp(15px, 3.8vw, 21px)', color: '#64748B', marginRight: 4 }}>Русский</span>
-            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#CBD5E1' }}>chevron_right</span>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>{t('profile_about_cafe')}</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
+          </button>
+          
+          <button className="btn-reset" onClick={() => setIsVacanciesOpen(true)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #CBD5E1' }}>
+            <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#0EA5E9', marginRight: 12 }}>
+              <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>work</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>{t('profile_vacancies')}</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
           </button>
 
-          {/* Theme */}
-          <button className="btn-reset" style={{
-            display: 'flex', alignItems: 'center', width: '100%', padding: '12px 0'
-          }}>
-            <div className="flex-center" style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#ECFDF5', marginRight: 12 }}>
-               <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6vw, 24px)', color: '#10B981' }}>light_mode</span>
+          <button className="btn-reset" onClick={() => setIsFAQOpen(true)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #CBD5E1' }}>
+            <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#EAB308', marginRight: 12 }}>
+              <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>help</span>
             </div>
-            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 500, color: '#0F172A' }}>Оформление</span>
-            <span style={{ fontSize: 'clamp(15px, 3.8vw, 21px)', color: '#64748B', marginRight: 4 }}>Светлое</span>
-            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#CBD5E1' }}>chevron_right</span>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>{t('profile_faq')}</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
           </button>
-        </div>
 
-        {/* Menu Items - iOS Style List */}
-        <div style={{
-          backgroundColor: '#FFF',
-          borderRadius: 16,
-          padding: '4px 16px',
-          marginBottom: 32,
-        }}>
-          {MENU_ITEMS.map((item, index) => (
-            <button
-              key={item.label}
-              onClick={() => {
-                if (item.label === 'О кофейне') {
-                  setIsAboutCafeOpen(true);
-                } else if (item.label === 'О приложении') {
-                  setIsAboutAppOpen(true);
-                } else if (item.label === 'Вопросы и ответы') {
-                  setIsFAQOpen(true);
-                } else if (item.label === 'Поделиться приложением') {
-                  handleShareApp();
-                }
-              }}
-              className="btn-reset"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                width: '100%',
-                padding: '12px 0',
-                borderBottom: index === MENU_ITEMS.length - 1 ? 'none' : '1px solid #F1F5F9',
-              }}
-            >
-              <div className="flex-center" style={{
-                width: 32, height: 32, borderRadius: 8, backgroundColor: item.bg, marginRight: 12
-              }}>
-                <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6vw, 24px)', color: item.color, fontVariationSettings: "'FILL' 1" }}>
-                  {item.icon}
-                </span>
-              </div>
-              <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 500, color: '#0F172A' }}>
-                {item.label}
-              </span>
-              <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#CBD5E1' }}>
-                chevron_right
-              </span>
-            </button>
-          ))}
-        </div>
+          <button className="btn-reset" onClick={() => setIsAboutAppOpen(true)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #CBD5E1' }}>
+            <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#8B5CF6', marginRight: 12 }}>
+              <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>menu_book</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>{t('profile_about_app')}</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
+          </button>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-          <button className="btn-reset" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: '#FFF', padding: '16px', borderRadius: 16,
-            border: '1px solid #ECFDF5'
-          }}>
-            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#10B981', marginRight: 8 }}>logout</span>
-            <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 600, color: '#10B981' }}>Выйти из аккаунта</span>
+          <button className="btn-reset" onClick={handleShareApp} disabled={isSharing} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #CBD5E1', opacity: isSharing ? 0.6 : 1, cursor: isSharing ? 'default' : 'pointer' }}>
+            <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#10B981', marginRight: 12 }}>
+              {isSharing ? (
+                 <div style={{ width: 'clamp(14px, 3.6rem, 20px)', height: 'clamp(14px, 3.6rem, 20px)', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', animation: 'rm-spin .6s linear infinite' }} />
+              ) : (
+                <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>share</span>
+              )}
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>{isSharing ? t('loading') || 'Загрузка...' : t('profile_share_app')}</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
+          </button>
+
+          <button className="btn-reset" onClick={() => setIsAboutDeveloperOpen(true)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #CBD5E1' }}>
+            <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#6366F1', marginRight: 12 }}>
+              <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>code</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>{t('profile_about_dev')}</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
+          </button>          
+          <button className="btn-reset" onClick={() => setIsLogoutConfirmOpen(true)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0' }}>
+            <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#EF4444', marginRight: 12 }}>
+              <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>logout</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#EF4444' }}>{t('profile_logout')}</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
           </button>
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <div style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 500, color: '#CBD5E1' }}>
-            Cafe v1.0.2
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, marginBottom: 24 }}>
+          <div style={{ fontSize: 'clamp(12px, 3.1rem, 14px)', fontWeight: 500, color: '#94A3B8' }}>
+            Green Chicken v1.0.2
           </div>
         </div>
       </div>
 
-      {isAboutCafeOpen && <AboutCafeModal onClose={() => setIsAboutCafeOpen(false)} />}
+      {/* Eager modals — loaded with the page, always instant */}
       {isEditProfileOpen && <EditProfileModal onClose={() => setIsEditProfileOpen(false)} />}
-      {isAboutAppOpen && <AboutAppModal onClose={() => setIsAboutAppOpen(false)} />}
-      {isFAQOpen && <FAQModal onClose={() => setIsFAQOpen(false)} />}
       {isLanguageOpen && <LanguageModal onClose={() => setIsLanguageOpen(false)} />}
+
+      {/* Lazy modals — background-prefetched, open instantly */}
+      <Suspense fallback={null}>
+        {isAboutCafeOpen && <AboutCafeModal onClose={() => setIsAboutCafeOpen(false)} />}
+        {isAboutAppOpen && <AboutAppModal onClose={() => setIsAboutAppOpen(false)} />}
+        {isAboutDeveloperOpen && <AboutDeveloperModal onClose={() => setIsAboutDeveloperOpen(false)} />}
+        {isFAQOpen && <FAQModal onClose={() => setIsFAQOpen(false)} />}
+        {isVacanciesOpen && <VacanciesModal onClose={() => setIsVacanciesOpen(false)} />}
+        {isLogoutConfirmOpen && (
+          <ConfirmLogoutModal
+            onClose={() => setIsLogoutConfirmOpen(false)}
+            onConfirm={async () => {
+              setIsLogoutConfirmOpen(false);
+              await supabase.auth.signOut();
+              clearAuthData();
+            }}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

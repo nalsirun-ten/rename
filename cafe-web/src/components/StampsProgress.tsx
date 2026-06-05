@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { useOverlayClose } from '../hooks/useOverlayClose';
 import { useProfileStore } from '../stores/profile';
 import coffeeCup3d from '@assets/images/coffee_cup_3d.png';
 import giftCup3d from '@assets/images/gift_cup_3d.png';
@@ -129,13 +132,11 @@ function StampsInfoModal({ onClose }: { onClose: () => void }) {
     };
   }, [onClose]);
 
-  const handleOverlay = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
-  }, [onClose]);
+  const handleOverlay = useOverlayClose(onClose);
 
   return createPortal(
-    <div className="overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
-      <div className="sheet-base flex-col" style={{ padding: '24px 16px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)', overflowY: 'auto' }}>
+    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
+      <div className="rs-sheet sheet-base flex-col" style={{ padding: '24px 16px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)', overflowY: 'auto' }}>
         <h3 style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', fontWeight: 800, color: '#1E293B', marginBottom: 8 }}>Как это работает</h3>
         <p style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 500, color: '#64748B', lineHeight: 1.6, marginBottom: 20 }}>
           Мы ценим каждого гостя! Совершайте покупки и получайте любимый кофе в подарок.

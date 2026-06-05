@@ -1,7 +1,7 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
-import coffee3dImage from '@assets/images/coffee_cup_3d.png';
-import restoranImage from '@assets/images/restoran-komanda.jpg';
+import { retry } from '../lib/retry';
 
 export type MenuTab = 'Меню' | 'Бизнес ланч';
 
@@ -13,54 +13,179 @@ export interface MenuItem {
   imageUrl: string;
   isFavorite: boolean;
   category: string;
+  kcal?: number;
 }
 
-// MOCK_MENU is removed, we fetch from Supabase
+const PAGE_SIZE_MENU = 8;
 
 interface MenuState {
   items: MenuItem[];
+  categories: string[];
+  favoriteIds: Record<string, boolean>;
   searchQuery: string;
   activeTab: MenuTab;
   sortBy: string;
+  page: number;
+  hasMore: boolean;
+  isLoadingMore: boolean;
   setSearchQuery: (query: string) => void;
   setActiveTab: (tab: MenuTab) => void;
   setSortBy: (sortBy: string) => void;
   toggleFavorite: (id: string) => Promise<void>;
   fetchFavorites: (userId: string) => Promise<void>;
-  fetchMenuItems: () => Promise<void>;
+  fetchMenuItems: (force?: boolean) => Promise<void>;
+  fetchMoreMenuItems: () => Promise<void>;
+  isLoading: boolean;
+  lastFetchedAt: number;
 }
 
-export const useMenuStore = create<MenuState>((set, get) => ({
+const POPULAR_CATEGORIES = [
+  'Кофе',
+  'Чай',
+  'Лимонады',
+  'Напитки',
+  'Авторские напитки',
+  'Выпечка',
+  'Десерты',
+  'Завтраки',
+  'Салаты',
+  'Супы',
+  'Горячие блюда',
+  'Паста',
+  'Пицца',
+  'Бургеры',
+  'Сэндвичи',
+  'Суши',
+  'Роллы',
+  'Закуски',
+  'Гарниры',
+  'Соусы'
+];
+
+function normalizeCategory(dbCategory: string | null | undefined): string {
+  if (!dbCategory) return '';
+  const trimmed = dbCategory.trim();
+  const match = POPULAR_CATEGORIES.find(cat => cat.toLowerCase() === trimmed.toLowerCase());
+  return match || trimmed;
+}
+
+function getActiveCategories(items: MenuItem[]): string[] {
+  return POPULAR_CATEGORIES.filter(popularCat =>
+    items.some(item => item.category === popularCat)
+  );
+}
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export const useMenuStore = create<MenuState>()(
+  persist(
+    (set, get) => ({
   items: [],
+  categories: [],
+  favoriteIds: {},
+  isLoading: false,
+  lastFetchedAt: 0,
+  page: 1,
+  hasMore: true,
+  isLoadingMore: false,
   searchQuery: '',
   activeTab: 'Меню',
-  sortBy: 'Без сортировки',
+  sortBy: '',
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setActiveTab: (tab: MenuTab) => set({ activeTab: tab }),
   setSortBy: (sortBy: string) => set({ sortBy }),
 
-  fetchMenuItems: async () => {
-    const { data, error } = await supabase.from('menu_items').select('*').order('created_at', { ascending: false });
-    if (data && !error) {
-      set({
-        items: data.map(item => ({
+  fetchMenuItems: async (force = false) => {
+    const state = get();
+    // Reset page to show first page of items (IndexedDB may hold more from previous session).
+    // Do NOT reset hasMore — preserve the last known value to avoid StrictMode re-triggers.
+    set({ page: 1 });
+
+    if (!force && state.items.length > 0 && state.categories.length > 0 && Date.now() - state.lastFetchedAt < CACHE_TTL_MS) {
+      if (state.isLoading) set({ isLoading: false });
+      return;
+    }
+    const hasExisting = get().items.length > 0;
+    set({ isLoading: !hasExisting, hasMore: true });
+    
+    try {
+      const itemsRes = await retry(() => supabase
+        .from('menu_items')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(0, PAGE_SIZE_MENU - 1));
+
+      const { data, error, count } = itemsRes;
+
+      if (data && !error) {
+        const formattedItems = data.map((item: any) => ({
           id: item.id,
           title: item.name,
           description: item.description,
           price: item.price,
           imageUrl: item.image_url,
-          category: item.category,
-          isFavorite: false, // will be updated by fetchFavorites later
-        }))
-      });
-      // Try fetching favorites if logged in
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        get().fetchFavorites(session.user.id);
+          category: normalizeCategory(item.category),
+          isFavorite: !!get().favoriteIds[item.id],
+          kcal: item.calories || null,
+        }));
+
+        const activeCategories = getActiveCategories(formattedItems);
+
+        set({
+          items: formattedItems,
+          categories: activeCategories,
+          hasMore: (count ?? 0) > PAGE_SIZE_MENU,
+          lastFetchedAt: Date.now(),
+        });
       }
+    } catch (err) {
+      console.error('Error fetching menu items:', err);
+    } finally {
+      set({ isLoading: false });
     }
   },
-  
+
+  fetchMoreMenuItems: async () => {
+    const { page, items, hasMore, isLoadingMore } = get();
+    if (!hasMore || isLoadingMore) return;
+    set({ isLoadingMore: true });
+    const nextPage = page + 1;
+    const from = page * PAGE_SIZE_MENU;
+    const to = from + PAGE_SIZE_MENU - 1;
+    try {
+      const { data, error, count } = await retry(() => supabase
+        .from('menu_items')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to));
+      if (data && !error) {
+        const newItems = data.map((item: any) => ({
+          id: item.id,
+          title: item.name,
+          description: item.description,
+          price: item.price,
+          imageUrl: item.image_url,
+          category: normalizeCategory(item.category),
+          isFavorite: !!get().favoriteIds[item.id],
+          kcal: item.calories || null,
+        }));
+        const combinedItems = [...items, ...newItems];
+        const activeCategories = getActiveCategories(combinedItems);
+        
+        set({
+          items: combinedItems,
+          categories: activeCategories,
+          page: nextPage,
+          hasMore: (count ?? 0) > to + 1,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching more menu items:', err);
+    } finally {
+      set({ isLoadingMore: false });
+    }
+  },
+
   fetchFavorites: async (userId: string) => {
     const { data } = await supabase
       .from('user_favorites')
@@ -68,28 +193,34 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       .eq('user_id', userId);
       
     if (data) {
-      const favoriteIds = new Set(data.map((fav: any) => fav.item_id));
+      const newFavoriteIds: Record<string, boolean> = {};
+      data.forEach((fav: any) => {
+        newFavoriteIds[fav.item_id] = true;
+      });
       set((state) => ({
+        favoriteIds: newFavoriteIds,
         items: state.items.map((item) => ({
           ...item,
-          isFavorite: favoriteIds.has(item.id)
+          isFavorite: !!newFavoriteIds[item.id]
         }))
       }));
     }
   },
 
   toggleFavorite: async (id: string) => {
-    // Optimistic UI update
     const item = get().items.find(i => i.id === id);
     const newIsFavorite = !item?.isFavorite;
     
     set((state) => ({
+      favoriteIds: {
+        ...state.favoriteIds,
+        [id]: newIsFavorite
+      },
       items: state.items.map((i) =>
         i.id === id ? { ...i, isFavorite: newIsFavorite } : i
       ),
     }));
 
-    // Update remote DB
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       if (newIsFavorite) {
@@ -105,4 +236,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       }
     }
   },
-}));
+}),
+    {
+      name: 'cafe-menu-storage',
+      partialize: (state) => ({ items: state.items, categories: state.categories, favoriteIds: state.favoriteIds, lastFetchedAt: state.lastFetchedAt }),
+    }
+  )
+);

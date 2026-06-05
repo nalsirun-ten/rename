@@ -18,7 +18,6 @@ import NewsSection from './NewsSection';
 
 export default function HomeContent() {
   const [showReviews, setShowReviews] = useState(false);
-
   return (
     <>
       <div
@@ -28,8 +27,8 @@ export default function HomeContent() {
           zIndex: 1,
           paddingTop: 16,
           backgroundColor: '#FEF9F5',
-          borderTopLeftRadius: 52,
-          borderTopRightRadius: 52,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
           boxShadow: '0 -4px 16px 2px rgba(0,0,0,0.06)',
           flex: 1,
           display: 'flex',
@@ -37,6 +36,7 @@ export default function HomeContent() {
         }}
       >
         <LoyaltyCard />
+
         {/* SizedBox(height:8) — matching Flutter */}
         <div style={{ height: 8, flexShrink: 0 }} />
         <StampsProgress />

@@ -1,128 +1,205 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useProfileStore, getTierForVisits } from '../stores/profile';
-
-// Re-define TIERS locally since they aren't exported as an array from the store,
-// or we can just mock the list for the UI.
-const TIERS_LIST = [
-  { name: 'Любитель', cb: 3, min: 0, max: 100, color: '#94A3B8', bg: '#F1F5F9', icon: 'local_cafe' },
-  { name: 'Ценитель', cb: 5, min: 100, max: 500, color: '#F59E0B', bg: '#FEF3C7', icon: 'workspace_premium' },
-  { name: 'Знаток', cb: 7, min: 500, max: 1000, color: '#3B82F6', bg: '#EFF6FF', icon: 'diamond' },
-  { name: 'Гурман', cb: 10, min: 1000, max: 9999999, color: '#A855F7', bg: '#FAF5FF', icon: 'stars' },
-];
+import { useProfileStore, REWARDS, getNextReward } from '../stores/profile';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { useOverlayClose } from '../hooks/useOverlayClose';
+import { useT } from '../i18n/useT';
 
 interface Props {
   onClose: () => void;
 }
 
-export default function TierModal({ onClose }: Props) {
-  const { visits } = useProfileStore();
-  const currentTier = getTierForVisits(visits);
-  const sheetRef = useRef<HTMLDivElement>(null);
+// ─── Skeleton placeholder for smooth GPU-accelerated sheet animation ───
+function TierModalSkeleton() {
+  return (
+    <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Progress card skeleton */}
+      <div style={{ height: 120, borderRadius: 24, background: 'linear-gradient(135deg, #374151 0%, #1F2937 100%)', opacity: 0.6 }} />
+      {/* Timeline skeletons */}
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} style={{ display: 'flex', gap: 12 }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E2E8F0', opacity: 0.3, flexShrink: 0 }} />
+          <div style={{ flex: 1, height: 52, borderRadius: 24, background: '#F1F5F9', opacity: 0.5 }} />
+        </div>
+      ))}
+    </div>
+  );
+}
 
+export default function TierModal({ onClose }: Props) {
+  const t = useT();
+  const sheetRef = useSwipeToClose(onClose);
+  const { visits } = useProfileStore();
+
+  useLockBodyScroll();
+  const handleOverlay = useOverlayClose(onClose);
+
+  // Defer heavy content render to avoid blocking first animation frame
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
-  const handleOverlay = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
-  }, [onClose]);
+  // Progress logic
+  const nextReward = getNextReward(visits);
+
+  // Extend the list if visits >= 1000 so they always see their next reward
+  const displayRewards = [...REWARDS];
+  if (nextReward.visits > 1000) {
+    displayRewards.push(nextReward);
+  }
+
+  let previousMilestone = 0;
+  if (visits >= 1000) {
+    const cycle = Math.floor((visits - 1000) / 250);
+    previousMilestone = 1000 + cycle * 250;
+  } else {
+    for (let i = REWARDS.length - 1; i >= 0; i--) {
+      if (visits >= REWARDS[i].visits) {
+        previousMilestone = REWARDS[i].visits;
+        break;
+      }
+    }
+  }
+
+  const progressInInterval = Math.max(0, visits - previousMilestone);
+  const interval = nextReward.visits - previousMilestone;
+  const progress = Math.min(progressInInterval / interval, 1);
+  const remaining = nextReward.visits - visits;
 
   return createPortal(
-    <div className="overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
-      <div 
+    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
+      <div
         ref={sheetRef}
-        className="sheet-base flex-col" style={{ overflowY: 'auto', padding: '24px 16px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}
+        className="rs-sheet sheet-base flex-col"
+        style={{
+          height: '70vh',
+          backgroundColor: '#FCFBFA',
+        }}
       >
-        
+
         {/* Header */}
-        <div className="flex-between" style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <h2 style={{ fontSize: 'clamp(22px, 5.6vw, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
-              Система лояльности
+        <div className="flex-between" style={{ padding: '24px 16px 16px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
+            <h2 style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
+              {t('rewards_title')}
             </h2>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
+            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E' }} />
           </div>
-          <button 
-            className="btn-reset flex-center" 
+          <button
+            className="btn-reset flex-center"
             onClick={onClose}
-            style={{ width: 'clamp(36px, 9.2vw, 50px)', height: 'clamp(36px, 9.2vw, 50px)', borderRadius: '50%', backgroundColor: '#F1F5F9' }}
+            style={{ width: 'clamp(36px, 9.2rem, 50px)', height: 'clamp(36px, 9.2rem, 50px)', borderRadius: '50%', backgroundColor: '#E2E8F0' }}
           >
-            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
           </button>
         </div>
 
+        {/* Scrollable Content */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+
+        {!mounted ? <TierModalSkeleton /> : (<>
+        {/* Progress Counter Card */}
+        <div style={{ padding: '0 16px 20px' }}>
+          <div style={{
+            borderRadius: 24, border: '2px solid #374151',
+            background: 'linear-gradient(135deg, #374151 0%, #1F2937 100%)',
+            padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
+                <span style={{ fontSize: 'clamp(24px, 6.1rem, 36px)', fontWeight: 600, color: '#FFF', lineHeight: 1 }}>{visits}</span>
+                <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{' / '}{nextReward.visits}</span>
+              </div>
+              <span style={{ fontSize: 'clamp(16px, 4rem, 24px)', fontWeight: 600, color: '#FFF', paddingLeft: 8 }}>-{remaining} {t('visits_abbr')}</span>
+            </div>
+
+            <div style={{ height: 8, width: '100%', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', flexShrink: 0 }}>
+              <div style={{ height: '100%', width: `${progress * 100}%`, backgroundColor: '#FFF', borderRadius: 4 }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <span style={{ fontSize: 'clamp(16px, 4rem, 20px)', fontWeight: 800, color: '#FFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
+                {t(nextReward.nameKey as any)}
+              </span>
+              <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', fontWeight: 800, color: '#FFF', flexShrink: 0 }}>{t('reward_next')}</span>
+            </div>
+          </div>
+        </div>
+
         {/* Content (Timeline) */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px' }}>
-          <div style={{ position: 'relative' }}>
-            {/* The vertical line connecting items */}
-            <div style={{
-              position: 'absolute',
-              left: 22, top: 16, bottom: 16,
-              width: 2, backgroundColor: '#CBD5E1',
-              zIndex: 0
-            }} />
+        <div style={{ padding: '0 16px', flex: 1, overflowY: 'auto' }}>
+          <div style={{ position: 'relative', animation: 'stamps-modal-fade-in 0.2s ease-out' }}>
+            {displayRewards.map((reward, index) => {
+                const isAchieved = visits >= reward.visits;
+                const isNext = !isAchieved && (index === 0 || visits >= displayRewards[index - 1].visits);
 
-            {TIERS_LIST.map((tier) => {
-              const isActive = currentTier.name === tier.name;
-              
-              return (
-                <div key={tier.name} style={{ display: 'flex', gap: 16, marginBottom: 16, position: 'relative', zIndex: 1 }}>
-                  {/* Icon Column */}
-                  <div style={{ position: 'relative', flexShrink: 0, marginTop: 8 }}>
-                    {/* Active highlight glow behind icon */}
-                    {isActive && (
-                      <div style={{
-                        position: 'absolute', inset: -8, borderRadius: '50%',
-                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                        zIndex: -1
-                      }} />
-                    )}
-                    <div style={{
-                      width: 'clamp(44px, 11.2vw, 62px)', height: 'clamp(44px, 11.2vw, 62px)', borderRadius: '50%',
-                      backgroundColor: tier.bg,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: isActive ? '0 0 0 2px #10B981' : '0 2px 8px rgba(0,0,0,0.05)'
-                    }}>
-                      <span className="icon-material" style={{ fontSize: 'clamp(24px, 6.1vw, 34px)', color: tier.color, fontVariationSettings: "'FILL' 1" }}>
-                        {tier.icon}
-                      </span>
-                    </div>
-                  </div>
+                const color = isAchieved ? '#22C55E' : isNext ? '#3B82F6' : '#94A3B8';
+                const bg = isAchieved ? '#F0FDF4' : isNext ? '#EFF6FF' : '#F8FAFC';
+                const iconName = isAchieved ? 'check_circle' : isNext ? 'redeem' : 'lock';
 
-                  {/* Card Column */}
-                  <div style={{
-                    flex: 1, backgroundColor: '#FFFFFF',
-                    borderRadius: 16, padding: '12px 16px',
-                    border: isActive ? '2px solid #10B981' : '1px solid #E2E8F0',
-                    boxShadow: isActive ? '0 8px 24px rgba(16, 185, 129, 0.2)' : '0 4px 12px rgba(0,0,0,0.05)',
-                    transition: 'all 0.3s ease'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 800, color: '#1E293B' }}>
-                        {tier.name}
-                      </span>
+                return (
+                  <div key={reward.visits} style={{ display: 'flex', gap: 12, marginBottom: index === displayRewards.length - 1 ? 0 : 12, position: 'relative', zIndex: 1 }}>
+                    {/* Icon Column */}
+                    <div style={{ position: 'relative', flexShrink: 0, marginTop: 'clamp(6px, 2rem, 12px)' }}>
+                      {index !== displayRewards.length - 1 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 'clamp(40px, 12.3rem, 60px)', bottom: 'calc(clamp(18px, 5.1rem, 28px) * -1)', left: 'calc(clamp(40px, 12.3rem, 60px) / 2 - 2px)',
+                          width: 4, backgroundColor: isAchieved ? '#22C55E' : '#E2E8F0', zIndex: -1
+                        }} />
+                      )}
                       <div style={{
-                        padding: '4px 8px', borderRadius: 8,
-                        backgroundColor: tier.color,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        width: 'clamp(40px, 12.3rem, 60px)', height: 'clamp(40px, 12.3rem, 60px)', borderRadius: '50%',
+                        backgroundColor: bg,
+                        border: `2px solid ${color}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                       }}>
-                        <span style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', fontWeight: 800, color: '#FFF' }}>
-                          {tier.cb}%
+                        <span className="icon-material" style={{ fontSize: 'clamp(20px, 6.1rem, 32px)', color: color, fontVariationSettings: "'FILL' 1" }}>
+                          {iconName}
                         </span>
                       </div>
                     </div>
-                    <p style={{ fontSize: 'clamp(13px, 3.3vw, 18px)', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-                      {tier.max > 10000 
-                        ? `Макс. кэшбэк ${tier.cb}% от ${tier.min} посещ.` 
-                        : `Кэшбэк ${tier.cb}% при ${tier.min}-${tier.max} посещ.`}
-                    </p>
+
+                    {/* Card Column */}
+                    <div style={{
+                      flex: 1, backgroundColor: isAchieved ? '#FFFFFF' : '#FEF9F5',
+                      borderRadius: 24, padding: '12px 16px',
+                      border: isNext ? `1.5px solid ${color}` : `1.5px solid ${isAchieved ? '#22C55E' : '#E2E8F0'}`,
+                      boxShadow: isNext ? `0 4px 12px rgba(59, 130, 246, 0.25)` : '0 4px 12px rgba(0,0,0,0.05)',
+                      opacity: isAchieved || isNext ? 1 : 0.7
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontSize: 'clamp(16px, 4rem, 20px)', fontWeight: 800, color: '#1E293B' }}>
+                          {t(reward.nameKey as any)}
+                        </span>
+                        <div style={{
+                          padding: '4px 10px', borderRadius: 10,
+                          backgroundColor: color,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <span style={{ fontSize: 'clamp(12px, 3rem, 15px)', fontWeight: 800, color: '#FFF', lineHeight: 1 }}>
+                            {reward.visits} {t('visits_abbr')}
+                          </span>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: 'clamp(13px, 3.3rem, 16px)', color: '#94A3B8', margin: 0, lineHeight: 1.4, fontWeight: 500 }}>
+                        {isAchieved
+                          ? t('reward_achieved')
+                          : isNext
+                            ? `${t('reward_visits_left')}: ${reward.visits - visits}`
+                            : t('reward_next')}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+        </div>
+        </>)}
         </div>
       </div>
     </div>,

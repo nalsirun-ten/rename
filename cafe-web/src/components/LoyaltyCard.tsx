@@ -1,20 +1,24 @@
 import { useState } from 'react';
-import { useProfileStore, getTierForVisits, getNextTierForVisits } from '../stores/profile';
+import { useProfileStore, getNextReward } from '../stores/profile';
 import QrCode from './QrCode';
 import QrModal from './QrModal';
-import BalanceModal from './BalanceModal';
+import RouletteModal from './RouletteModal';
 import TierModal from './TierModal';
+import { useT } from '../i18n/useT';
 
 export default function LoyaltyCard() {
   const [showQr, setShowQr] = useState(false);
-  const [showBalance, setShowBalance] = useState(false);
+  const [showRoulette, setShowRoulette] = useState(false);
   const [showTier, setShowTier] = useState(false);
 
-  const { points, visits, loyaltyNumber } = useProfileStore();
-  const currentTier = getTierForVisits(visits);
-  const nextTier = getNextTierForVisits(visits);
-  const progress = nextTier ? Math.min(visits / nextTier.min, 1) : 1;
-  const remaining = nextTier ? nextTier.min - visits : 0;
+  const { visits, loyaltyNumber } = useProfileStore();
+  const t = useT();
+  const nextReward = getNextReward(visits);
+  const previousMilestone = nextReward.visits > 20 ? nextReward.visits - 20 : 0;
+  const progressInInterval = visits - previousMilestone;
+  const interval = nextReward.visits - previousMilestone;
+  const progress = Math.min(progressInInterval / interval, 1);
+  const remaining = nextReward.visits - visits;
 
   return (
     <div style={{ padding: '0 16px' }}>
@@ -26,7 +30,7 @@ export default function LoyaltyCard() {
           style={{
             boxSizing: 'border-box',
             aspectRatio: '0.94',
-            backgroundColor: '#1B5E3D', borderRadius: 36,
+            backgroundColor: '#1B5E3D', borderRadius: 28,
             border: '2px solid #D4A373', padding: 16,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer'
@@ -37,62 +41,108 @@ export default function LoyaltyCard() {
 
         {/* Right column */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          {/* Balance */}
-          <button
-            className="btn-reset"
-            onClick={() => setShowBalance(true)}
-            style={{
-              flex: 1, minHeight: 0, backgroundColor: '#E0F2FE', borderRadius: 36,
-              border: '2px solid #3B82F6', padding: '12px 16px',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              textAlign: 'left', cursor: 'pointer', width: '100%'
-            }}
-          >
-            <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 600, color: 'rgba(0,0,0,0.87)' }}>Ваш баланс</span>
-            <div style={{ height: 2 }} />
-            <div style={{ display: 'flex', alignItems: 'baseline' }}>
-              <span style={{ fontSize: 'clamp(36px, 9.2vw, 50px)', fontWeight: 500, color: '#000', lineHeight: 1.1 }}>{points}</span>
-              <div style={{ width: 4 }} />
-              <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 500, color: 'rgba(0,0,0,0.87)' }}>баллов</span>
-            </div>
-          </button>
+          {/* Reward Progress */}
+          <div style={{ flex: 1, position: 'relative' }}>
+            <button
+              className="btn-reset"
+              onClick={() => setShowTier(true)}
+              style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: 28, border: '2px solid #3B82F6',
+                backgroundColor: '#E0F2FE',
+                padding: 0, display: 'block', overflow: 'hidden',
+                textAlign: 'left', cursor: 'pointer'
+              }}
+            >
+              <div style={{
+                display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                width: '100%', height: '100%', padding: '12px 16px', boxSizing: 'border-box'
+              }}>
+                <span style={{ fontSize: 'clamp(12px, 3.1rem, 16px)', fontWeight: 600, color: 'rgba(0,0,0,0.87)', textAlign: 'left' }}>{t('rewards_title')}</span>
+                <div style={{ height: 2 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
+                    <span style={{ fontSize: 'clamp(28px, 7rem, 38px)', fontWeight: 600, color: '#000', lineHeight: 1.1 }}>{visits}</span>
+                    <span style={{ fontSize: 'clamp(12px, 3.1rem, 16px)', fontWeight: 600, color: 'rgba(0,0,0,0.87)', paddingLeft: 4 }}>/ {nextReward.visits}</span>
+                  </div>
+                  <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', fontWeight: 600, color: 'rgba(0,0,0,0.87)' }}>-{remaining}</span>
+                </div>
+                
+                <div style={{ height: 4, width: '100%', borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.1)', overflow: 'hidden', flexShrink: 0, marginTop: 4 }}>
+                  <div style={{ height: '100%', width: `${progress * 100}%`, backgroundColor: '#3B82F6', borderRadius: 2 }} />
+                </div>
+              </div>
+            </button>
+          </div>
 
           <div style={{ height: 12, flexShrink: 0 }} />
 
-          {/* Tier */}
-          <button
-            className="btn-reset"
-            onClick={() => setShowTier(true)}
-            style={{
-              flex: 1, minHeight: 0, borderRadius: 36, border: '2px solid #7C3AED',
-              background: 'linear-gradient(135deg, #A855F7 0%, #4C1D95 100%)',
-              padding: '12px 16px', display: 'flex', flexDirection: 'column',
-              justifyContent: 'space-between', overflow: 'hidden',
-              textAlign: 'left', cursor: 'pointer', width: '100%'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
-                <span style={{ fontSize: 'clamp(22px, 5.6vw, 32px)', fontWeight: 600, color: '#FFF', lineHeight: 1 }}>{visits}</span>
-                {nextTier && <span style={{ fontSize: 'clamp(12px, 3.1vw, 16px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{' / '}{nextTier.min}</span>}
-              </div>
-              {nextTier && <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 600, color: '#FFF', paddingLeft: 8 }}>-{remaining}</span>}
-            </div>
-            
-            <div style={{ height: 6, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${progress * 100}%`, backgroundColor: '#FFF', borderRadius: 4 }} />
-            </div>
+          {/* Roulette Button */}
+          <div style={{ flex: 1, position: 'relative' }}>
+            <button
+              className="btn-reset"
+              onClick={() => setShowRoulette(true)}
+              style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%',
+                background: 'linear-gradient(135deg, #9333EA 0%, #6B21A8 100%)',
+                borderRadius: 28,
+                border: '2px solid #A855F7', padding: 0, overflow: 'hidden',
+                textAlign: 'left', cursor: 'pointer', display: 'block'
+              }}
+            >
+              <div style={{
+                display: 'flex', flexDirection: 'column',
+                width: '100%', height: '100%', position: 'relative'
+              }}>
+                <img 
+                  src="/wheel.webp" 
+                  alt="Фортуна" 
+                  style={{ 
+                    position: 'absolute',
+                    bottom: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%) translateY(5%)',
+                    width: '95%',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    zIndex: 0,
+                    filter: 'brightness(1.2) saturate(1.1) drop-shadow(0 16px 24px rgba(0,0,0,0.5))'
+                  }} 
+                />
+                
+                {/* Gradient Shadow Overlay */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: 0, left: 0, right: 0,
+                  height: '60%',
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
+                  zIndex: 1
+                }} />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 800, color: '#FFF', flex: 1 }}>{currentTier.name}</span>
-              <span style={{ fontSize: 'clamp(14px, 3.6vw, 20px)', fontWeight: 800, color: '#FFF' }}>{currentTier.cb}%</span>
-            </div>
-          </button>
+                {/* Text Container */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: 6, left: 0, right: 0,
+                  zIndex: 2,
+                  display: 'flex',
+                  justifyContent: 'center'
+                }}>
+                  <span style={{ 
+                    fontSize: 'clamp(14px, 4vw, 18px)', 
+                    fontWeight: 700, 
+                    color: '#FFF',
+                    textShadow: '0px 2px 4px rgba(0,0,0,0.8)'
+                  }}>
+                    Фортуна
+                  </span>
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
       
       {showQr && <QrModal onClose={() => setShowQr(false)} />}
-      {showBalance && <BalanceModal onClose={() => setShowBalance(false)} />}
+      {showRoulette && <RouletteModal onClose={() => setShowRoulette(false)} />}
       {showTier && <TierModal onClose={() => setShowTier(false)} />}
     </div>
   );

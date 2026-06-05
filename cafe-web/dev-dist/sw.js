@@ -67,8 +67,9 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-25613826'], (function (workbox) { 'use strict';
+define(['./workbox-caf3a6a6'], (function (workbox) { 'use strict';
 
+  importScripts("firebase-messaging-sw.js");
   self.skipWaiting();
   workbox.clientsClaim();
   /**
@@ -81,7 +82,7 @@ define(['./workbox-25613826'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.38n4ee15o0c"
+    "revision": "0.a84s1csgn8s"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -92,6 +93,35 @@ define(['./workbox-25613826'], (function (workbox) { 'use strict';
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 10,
       maxAgeSeconds: 31536000
+    })]
+  }), 'GET');
+  workbox.registerRoute(/^https:\/\/fonts\.gstatic\.com\/.*/i, new workbox.CacheFirst({
+    "cacheName": "google-fonts-files",
+    plugins: [new workbox.ExpirationPlugin({
+      maxEntries: 30,
+      maxAgeSeconds: 31536000
+    })]
+  }), 'GET');
+  workbox.registerRoute(/^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i, new workbox.NetworkFirst({
+    "cacheName": "supabase-api",
+    "networkTimeoutSeconds": 5,
+    plugins: [new workbox.ExpirationPlugin({
+      maxEntries: 200,
+      maxAgeSeconds: 3600
+    })]
+  }), 'GET');
+  workbox.registerRoute(/^https:\/\/.*\.supabase\.co\/storage\/v1\/.*/i, new workbox.CacheFirst({
+    "cacheName": "supabase-storage",
+    plugins: [new workbox.ExpirationPlugin({
+      maxEntries: 200,
+      maxAgeSeconds: 86400
+    })]
+  }), 'GET');
+  workbox.registerRoute(/^https:\/\/maps\.googleapis\.com\/maps\/vt\?.*/i, new workbox.CacheFirst({
+    "cacheName": "google-maps-tiles",
+    plugins: [new workbox.ExpirationPlugin({
+      maxEntries: 100,
+      maxAgeSeconds: 604800
     })]
   }), 'GET');
 

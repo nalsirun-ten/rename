@@ -13,12 +13,15 @@ interface Props {
   color?: string;
 }
 
-export default function BottomNavIcon({ name, filled, color = '#FFFFFF' }: Props) {
+import { memo } from 'react';
+
+const BottomNavIcon = memo(function BottomNavIcon({ name, filled, color = '#FFFFFF' }: Props) {
   return (
     <span
+      className="icon-material"
       style={{
         fontFamily: "'Material Symbols Rounded'",
-        fontSize: 'clamp(24px, 6vw, 32px)',
+        fontSize: 'clamp(24px, 6rem, 32px)',
         fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' 400, 'GRAD' 0, 'opsz' 24`,
         lineHeight: 1,
         display: 'inline-block',
@@ -28,4 +31,6 @@ export default function BottomNavIcon({ name, filled, color = '#FFFFFF' }: Props
       {name}
     </span>
   );
-}
+});
+
+export default BottomNavIcon;
