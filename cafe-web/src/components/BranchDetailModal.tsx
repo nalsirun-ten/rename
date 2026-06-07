@@ -5,6 +5,7 @@ import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n/translations';
 import { useOverlayClose } from '../hooks/useOverlayClose';
+import { useSwipeToClose } from '../hooks/useSwipeToClose';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
@@ -50,6 +51,7 @@ export default function BranchDetailModal() {
   }, [activeBranchId]);
 
   const handleOverlay = useOverlayClose(closeBranch, !!activeBranchId);
+  const sheetRef = useSwipeToClose(closeBranch);
 
   if (!activeBranchId) return null;
 
@@ -72,7 +74,7 @@ export default function BranchDetailModal() {
   const todayScheduleString = getScheduleString(todayIndex);
 
   return (
-    <div className="rs-overlay" onClick={handleOverlay} style={{
+    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{
       position: 'absolute',
       top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: 'rgba(0,0,0,0.5)',
@@ -82,7 +84,7 @@ export default function BranchDetailModal() {
       justifyContent: 'flex-end',
     }}>
       {/* Main Bottom Sheet — auto‑sized to content, capped at 94vh */}
-      <div className="rs-sheet sheet-base" style={{
+      <div ref={sheetRef} className="rs-sheet sheet-base" style={{
         backgroundColor: '#FFF',
         display: 'flex',
         flexDirection: 'column',
@@ -293,8 +295,10 @@ export default function BranchDetailModal() {
 
 function RouteModal({ branch, lat, lng, onClose, t }: any) {
   const handleOverlay = useOverlayClose(onClose);
+  const sheetRef = useSwipeToClose(onClose);
+
   return (
-    <div className="rs-overlay" onClick={handleOverlay} style={{
+    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{
       position: 'absolute',
       top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: 'rgba(0,0,0,0.5)',
@@ -303,7 +307,7 @@ function RouteModal({ branch, lat, lng, onClose, t }: any) {
       flexDirection: 'column',
       justifyContent: 'flex-end',
     }}>
-      <div className="rs-sheet sheet-base" style={{
+      <div ref={sheetRef} className="rs-sheet sheet-base" style={{
         backgroundColor: '#FFF',
         padding: '24px 16px',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',

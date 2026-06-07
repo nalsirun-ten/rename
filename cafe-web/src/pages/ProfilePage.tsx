@@ -205,7 +205,7 @@ export default function ProfilePage() {
               marginTop: 2,
               opacity: 0.85
             }}>
-              <span className="icon-material" style={{ fontSize: 14, color: '#FCD34D' }}>qr_code_2</span>
+              <span className="icon-material" style={{ fontSize: 14, color: '#FFFFFF' }}>qr_code_2</span>
               <span style={{ fontSize: 12, fontWeight: 400, color: '#FFFFFF', letterSpacing: '0.5px' }}>
                 {loyaltyNumber ? `${loyaltyNumber.substring(0, 3)} ${loyaltyNumber.substring(3)}` : '000 000'}
               </span>

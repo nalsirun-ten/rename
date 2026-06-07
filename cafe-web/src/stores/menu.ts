@@ -130,13 +130,22 @@ export const useMenuStore = create<MenuState>()(
         }));
 
         const activeCategories = getActiveCategories(formattedItems);
+        const hasMoreFlag = (count ?? 0) > PAGE_SIZE_MENU;
 
-        set({
-          items: formattedItems,
-          categories: activeCategories,
-          hasMore: (count ?? 0) > PAGE_SIZE_MENU,
-          lastFetchedAt: Date.now(),
-        });
+        if (
+          JSON.stringify(get().items) !== JSON.stringify(formattedItems) ||
+          JSON.stringify(get().categories) !== JSON.stringify(activeCategories) ||
+          get().hasMore !== hasMoreFlag
+        ) {
+          set({
+            items: formattedItems,
+            categories: activeCategories,
+            hasMore: hasMoreFlag,
+            lastFetchedAt: Date.now(),
+          });
+        } else {
+          set({ lastFetchedAt: Date.now() });
+        }
       }
     } catch (err) {
       console.error('Error fetching menu items:', err);

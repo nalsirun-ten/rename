@@ -76,7 +76,11 @@ export const useStoriesStore = create<StoriesState>()(
         description: s.description,
         createdAt: s.created_at,
       }));
-      set({ stories: formatted, lastFetchedAt: Date.now(), error: null });
+      if (JSON.stringify(get().stories) !== JSON.stringify(formatted)) {
+        set({ stories: formatted, lastFetchedAt: Date.now(), error: null });
+      } else {
+        set({ lastFetchedAt: Date.now(), error: null });
+      }
     } catch (err: any) {
       console.error('Error fetching stories:', err);
       set({ error: err?.message || 'Failed to load stories' });

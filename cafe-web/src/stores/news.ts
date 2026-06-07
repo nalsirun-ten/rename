@@ -75,17 +75,19 @@ export const useNewsStore = create<NewsState>()(
     if (!hasExisting) set({ isLoading: true });
     const { data, error } = await retry(() => supabase.from('news_posts').select('*').order('created_at', { ascending: false }));
     if (data && !error) {
-      set({
-        news: data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          content: item.content,
-          imageUrl: item.image_url,
-          createdAt: item.created_at,
-          category: 'info' as const, // DB is missing category, fallback to info
-        })),
-        lastFetchedAt: Date.now(),
-      });
+      const newNews = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        imageUrl: item.image_url,
+        createdAt: item.created_at,
+        category: 'info' as const,
+      }));
+      if (JSON.stringify(get().news) !== JSON.stringify(newNews)) {
+        set({ news: newNews, lastFetchedAt: Date.now() });
+      } else {
+        set({ lastFetchedAt: Date.now() });
+      }
     }
     set({ isLoading: false });
   }

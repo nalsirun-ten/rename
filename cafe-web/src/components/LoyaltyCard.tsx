@@ -104,8 +104,7 @@ export default function LoyaltyCard() {
                     width: '95%',
                     height: 'auto',
                     objectFit: 'contain',
-                    zIndex: 0,
-                    filter: 'brightness(1.2) saturate(1.1) drop-shadow(0 16px 24px rgba(0,0,0,0.5))'
+                    zIndex: 0
                   }} 
                 />
                 

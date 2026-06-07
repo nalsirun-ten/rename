@@ -17,7 +17,7 @@ const PRIZES = [
   { label: "Скидка 15% на десерты", short: "-15%",     emoji: "🍰", color: "#FCE7F3", weight: 15 },
   { label: "Банкрот",              short: "БАНКРОТ",  emoji: "💀", color: "#0F172A", textColor: "#FFFFFF", weight: 20 },
   { label: "Печенье в подарок",     short: "ПЕЧЕНЬЕ",  emoji: "🍪", color: "#FEF3C7", weight: 10 },
-  { label: "Бесплатный сироп",     short: "СИРОП",    emoji: "🍯", color: "#E0E7FF", weight: 10 },
+  { label: "Ещё попытка",          short: "ЕЩЁ РАЗ", emoji: "🔄", color: "#DBEAFE", textColor: "#1E40AF", weight: 10 },
   { label: "Бесплатный десерт",    short: "ДЕСЕРТ",   emoji: "🧁", color: "#D1FAE5", weight: 5 },
 ];
 
@@ -28,6 +28,7 @@ const PRIZE_DESCRIPTIONS: Record<string, string> = {
   "Бесплатный сироп":     "Одна порция сиропа для добавления в кофе",
   "Скидка 15% на десерты": "Скидка 15% на любой десерт из меню",
   "Бесплатный десерт":    "Любой десерт из меню — бесплатно",
+  "Ещё попытка":          "Вам повезло! Крутите колесо ещё раз",
 };
 
 const PRIZE_INFO: { label: string; emoji: string; description: string; color: string }[] = [];
@@ -61,13 +62,7 @@ export default function Roulette() {
   const wheelRef = useRef<SVGSVGElement>(null);
   const rotationRef = useRef(0);
 
-  // Defer heavy SVG rendering to avoid blocking the sheet slide-up animation's first frame.
-  // The skeleton placeholder preserves correct height → no layout shift → smooth animation.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
+
 
   useEffect(() => {
     if (wheelRef.current) {
@@ -82,9 +77,17 @@ export default function Roulette() {
     setWonPrize(null);
 
     const prizeIndex = pickWeightedIndex();
+    // Random offset within the segment so the pointer doesn't always land dead-center
     const randomOffset = 3 + Math.random() * (SLICE_DEG - 6);
-    const targetDelta = 2880 + (360 - prizeIndex * SLICE_DEG) - randomOffset;
-    const newRotation = rotationRef.current + targetDelta;
+    // The absolute angle where the target segment sits under the top pointer (at -90° / 270°).
+    // Segment i spans from (i * SLICE_DEG - 90°) to ((i+1) * SLICE_DEG - 90°).
+    // To place segment i under the top pointer we need rotation = -(i * SLICE_DEG + randomOffset).
+    // Normalise to [0, 360) then add full spins for a nice visual spin.
+    const targetAngle = ((-(prizeIndex * SLICE_DEG + randomOffset)) % 360 + 360) % 360;
+    // Ensure we always spin forward by at least 8 full turns from the current position
+    const currentMod = ((rotationRef.current % 360) + 360) % 360;
+    const extraNeeded = (targetAngle - currentMod + 360) % 360;
+    const newRotation = rotationRef.current + 2880 + extraNeeded;
 
     const anim = wheelRef.current.animate(
       [
@@ -113,6 +116,14 @@ export default function Roulette() {
       setSpinning(false);
       const prize = PRIZES[prizeIndex].label;
       setWonPrize(prize);
+
+      if (prize === 'Ещё попытка') {
+        // Extra spin: don't record, allow spinning again after a brief pause
+        setTimeout(() => {
+          setWonPrize(null);
+        }, 2500);
+        return;
+      }
 
       if (prize !== 'Банкрот') {
         import('canvas-confetti').then(({ default: confetti }) => {
@@ -163,7 +174,7 @@ export default function Roulette() {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const prizeExpiryMs = 60 * 60 * 1000; // 1 hour
+  const prizeExpiryMs = 20 * 60 * 1000; // 20 minutes
   const getPrizeTimeLeft = () => {
     if (!lastRouletteSpin || !activePrize || activePrize === 'Банкрот') return 0;
     const spinDate = new Date(lastRouletteSpin).getTime();
@@ -274,28 +285,29 @@ export default function Roulette() {
     );
   }), []);
 
-  // Skeleton placeholder — preserves layout height while heavy SVG rasterizes on GPU layer.
-  // This prevents the first animation frame from being blocked by SVG parsing/painting.
-  if (!mounted) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 0 8px', width: '100%' }}>
-        <div style={{ width: 410, height: 410, borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #1E3A5F, #0F2B4C, #0A1A33)', opacity: 0.6 }} />
-        <div style={{ height: 16 }} />
-        <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 340 }}>
-          <div style={{ flex: 1, height: 52, borderRadius: 16, background: '#E2E8F0', opacity: 0.4 }} />
-          <div style={{ flex: 1, height: 52, borderRadius: 16, background: '#1E293B', opacity: 0.4 }} />
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       padding: '0 0 8px', justifyContent: 'flex-start',
       overflowX: 'hidden', width: '100%',
-      position: 'relative'
+      position: 'relative', marginTop: -8
     }}>
+
+      {/* Warning tip */}
+      <div style={{ 
+        display: 'flex', alignItems: 'center', gap: 8, 
+        marginTop: 16, marginBottom: -8, padding: '10px 16px', 
+        backgroundColor: 'rgba(59, 130, 246, 0.08)', 
+        borderRadius: 14, maxWidth: 340, width: '100%',
+        border: '1px solid rgba(59, 130, 246, 0.2)'
+      }}>
+        <span className="icon-material" style={{ fontSize: 18, color: '#3B82F6', flexShrink: 0 }}>schedule</span>
+        <span style={{ fontSize: 12, color: '#1D4ED8', fontWeight: 600, lineHeight: 1.3 }}>
+          Выигрыш действует 20 мин. Крутите барабан в кофейне!
+        </span>
+      </div>
 
       {/* Wheel Assembly */}
       <div
@@ -303,7 +315,7 @@ export default function Roulette() {
           position: 'relative',
           width: SIZE + 40,
           height: SIZE + 40,
-          marginBottom: 4,
+          marginBottom: 0,
         }}
       >
         {/* Static Dark Blue Backing Circle */}
@@ -473,19 +485,19 @@ export default function Roulette() {
       {/* Prize Result */}
       {wonPrize && (
         <div style={{
-          background: wonPrize === 'Банкрот' ? '#0F172A' : '#15803D',
-          border: wonPrize === 'Банкрот' ? '2px solid #EF4444' : '2px solid #22C55E',
+          background: wonPrize === 'Банкрот' ? '#0F172A' : wonPrize === 'Ещё попытка' ? '#1E3A5F' : '#15803D',
+          border: wonPrize === 'Банкрот' ? '2px solid #EF4444' : wonPrize === 'Ещё попытка' ? '2px solid #3B82F6' : '2px solid #22C55E',
           padding: '16px 24px', borderRadius: 20, marginBottom: 20,
           textAlign: 'center', animation: 'stamps-modal-slide-up 0.4s ease-out',
           width: '100%', maxWidth: 320, boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
         }}>
-          <div style={{ fontSize: 20, fontWeight: 900, color: wonPrize === 'Банкрот' ? '#EF4444' : '#22C55E', marginBottom: 4 }}>
-            {wonPrize === 'Банкрот' ? '😞 Банкрот!' : '🎉 Поздравляем!'}
+          <div style={{ fontSize: 20, fontWeight: 900, color: wonPrize === 'Банкрот' ? '#EF4444' : wonPrize === 'Ещё попытка' ? '#60A5FA' : '#22C55E', marginBottom: 4 }}>
+            {wonPrize === 'Банкрот' ? '😞 Банкрот!' : wonPrize === 'Ещё попытка' ? '🔄 Ещё попытка!' : '🎉 Поздравляем!'}
           </div>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#FFF' }}>
-            {wonPrize === 'Банкрот' ? 'Повезёт в следующий раз' : `Вы выиграли ${wonPrize}`}
+            {wonPrize === 'Банкрот' ? 'Повезёт в следующий раз' : wonPrize === 'Ещё попытка' ? 'Крутите колесо ещё раз!' : `Вы выиграли ${wonPrize}`}
           </div>
-          {wonPrize !== 'Банкрот' && (
+          {wonPrize !== 'Банкрот' && wonPrize !== 'Ещё попытка' && (
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 8 }}>
               Покажите экран баристе для получения приза
             </div>
@@ -494,9 +506,9 @@ export default function Roulette() {
       )}
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 340, marginTop: 4 }}>
+      <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 340, marginTop: -8 }}>
         <button
-          onClick={() => setShowPrizesModal(true)}
+          onClick={() => setTimeout(() => setShowPrizesModal(true), 10)}
           className="btn-reset"
           style={{ flex: 1, padding: '14px 16px', borderRadius: 16, backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
@@ -504,7 +516,7 @@ export default function Roulette() {
           Условия
         </button>
         <button
-          onClick={() => setShowHistoryModal(true)}
+          onClick={() => setTimeout(() => setShowHistoryModal(true), 10)}
           className="btn-reset"
           style={{ flex: 1, padding: '14px 16px', borderRadius: 16, backgroundColor: '#1E293B', color: '#FFFFFF', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
@@ -512,6 +524,8 @@ export default function Roulette() {
           Мои выигрыши
         </button>
       </div>
+
+
 
       {/* History Modal */}
       {showHistoryModal && <HistoryModal onClose={() => setShowHistoryModal(false)} isPrizeActive={isPrizeActive} activePrize={activePrize} prizeTimeLeft={prizeTimeLeft} formatPrizeCountdown={formatPrizeCountdown} />}
@@ -525,39 +539,45 @@ export default function Roulette() {
 
 function PrizesModal({ onClose }: { onClose: () => void }) {
   const sheetRef = useSwipeToClose(onClose);
+  useLockBodyScroll();
+  const handleOverlay = useOverlayClose(onClose);
 
   return createPortal(
-    <div className="rs-overlay overlay-base" onClick={onClose} style={{ zIndex: 99999 }}>
-      <div ref={sheetRef} className="rs-sheet sheet-base" style={{ display: 'flex', flexDirection: 'column', height: '70vh', backgroundColor: '#F9FAFC' }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 16px 16px', flexShrink: 0 }}>
+    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 99999 }}>
+      <div 
+        ref={sheetRef} 
+        className="rs-sheet flex-col" 
+        style={{ height: '70vh', backgroundColor: '#F9FAFC', width: '100%', maxWidth: 430, borderTopLeftRadius: 32, borderTopRightRadius: 32 }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 8px', flexShrink: 0 }}>
           <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: '#1E293B' }}>Что можно выиграть?</h3>
           <button className="btn-reset flex-center" onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#E2E8F0' }}>
             <span className="icon-material" style={{ fontSize: 24, color: '#64748B' }}>close</span>
           </button>
         </div>
 
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 16px 24px', animation: 'stamps-modal-fade-in 0.2s ease-out' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 16px 24px' }}>
           <div style={{ marginBottom: 24 }}>
             <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1E293B', marginBottom: 12 }}>Правила игры</h4>
-            <ul style={{ paddingLeft: 20, margin: 0, color: '#475569', fontSize: 14, lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <li>Вы можете крутить Фортуну 1 раз в сутки.</li>
-              <li>Для получения приза необходимо совершить любой заказ в кофейне (забрать приз без покупки нельзя).</li>
-              <li>Выигрыш действителен ровно <strong>1 час</strong> после прокрутки барабана.</li>
-              <li>Покажите таймер баристе до истечения времени.</li>
+            <ul style={{ paddingLeft: 20, margin: 0, color: '#475569', fontSize: 14, lineHeight: 1.5 }}>
+              <li style={{ marginBottom: 8 }}>Вы можете крутить Фортуну 1 раз в сутки.</li>
+              <li style={{ marginBottom: 8 }}>Для получения приза необходимо совершить любой заказ в кофейне (забрать приз без покупки нельзя).</li>
+              <li style={{ marginBottom: 8 }}>Выигрыш действителен ровно <strong>20 минут</strong> после прокрутки барабана.</li>
+              <li style={{ marginBottom: 8 }}>Покажите таймер баристе до истечения времени.</li>
               <li>Призы не суммируются с другими акциями и скидками.</li>
             </ul>
           </div>
           <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1E293B', marginBottom: 12 }}>Призы</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {PRIZE_INFO.map((info) => (
               <div
                 key={info.label}
                 style={{
+                  width: 'calc(50% - 6px)',
                   display: 'flex', flexDirection: 'column',
                   background: info.color,
                   borderRadius: 20,
                   padding: '16px 14px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
                   border: info.label === 'Банкрот' ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}
@@ -567,7 +587,6 @@ function PrizesModal({ onClose }: { onClose: () => void }) {
                   backgroundColor: info.label === 'Банкрот' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   marginBottom: 12,
-                  boxShadow: info.label === 'Банкрот' ? 'inset 0 1px 2px rgba(255,255,255,0.1)' : '0 2px 8px rgba(0,0,0,0.04)',
                   border: info.label === 'Банкрот' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.8)',
                 }}>
                   <span style={{ fontSize: 24 }}>{info.emoji}</span>
@@ -606,11 +625,17 @@ function HistoryModal({ onClose, isPrizeActive, activePrize, prizeTimeLeft, form
   formatPrizeCountdown: (ms: number) => string;
 }) {
   const sheetRef = useSwipeToClose(onClose);
+  useLockBodyScroll();
+  const handleOverlay = useOverlayClose(onClose);
 
   return createPortal(
-    <div className="rs-overlay overlay-base" onClick={onClose} style={{ zIndex: 99999 }}>
-      <div ref={sheetRef} className="rs-sheet sheet-base" style={{ display: 'flex', flexDirection: 'column', maxHeight: '70vh', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 16px 16px', flexShrink: 0 }}>
+    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 99999 }}>
+      <div 
+        ref={sheetRef} 
+        className="rs-sheet flex-col" 
+        style={{ maxHeight: '70vh', backgroundColor: '#FEF9F5', width: '100%', maxWidth: 430, borderTopLeftRadius: 32, borderTopRightRadius: 32 }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 8px', flexShrink: 0 }}>
           <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: '#1E293B' }}>Мои выигрыши</h3>
           <button className="btn-reset flex-center" onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#E2E8F0' }}>
             <span className="icon-material" style={{ fontSize: 24, color: '#64748B' }}>close</span>
@@ -623,7 +648,7 @@ function HistoryModal({ onClose, isPrizeActive, activePrize, prizeTimeLeft, form
               background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               borderRadius: 20, padding: 20, color: '#FFF',
               display: 'flex', alignItems: 'center', gap: 16,
-              boxShadow: '0 4px 12px rgba(16,185,129,0.3)'
+              border: '1px solid rgba(0,0,0,0.1)'
             }}>
               <div style={{
                 width: 56, height: 56, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.2)',
@@ -649,11 +674,11 @@ function HistoryModal({ onClose, isPrizeActive, activePrize, prizeTimeLeft, form
               textAlign: 'center', padding: '40px 20px', backgroundColor: '#F8FAFC', borderRadius: 20,
               border: '2px dashed #E2E8F0'
             }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>😢</div>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🎁</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#475569', marginBottom: 8 }}>
-                У вас пока нет выигрышей
+                У вас пока нет активных выигрышей
               </div>
-              <div style={{ fontSize: 14, color: '#94A3B8' }}>
+              <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 20, lineHeight: 1.4 }}>
                 Крутите колесо Фортуны каждый день, чтобы получать классные призы!
               </div>
             </div>

@@ -71,7 +71,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   setOnboarded: (val: boolean) => set({ isOnboarded: val }),
   
   fetchProfile: async (userId: string) => {
-    set({ isLoading: true });
+    const hasExisting = !!get().id;
+    if (!hasExisting) set({ isLoading: true });
     const { data, error } = await retry(() => supabase
       .from('profiles')
       .select('*')
@@ -79,7 +80,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       .single());
       
     if (data && !error) {
-      set({
+      const newData = {
         id: data.id,
         name: data.full_name || 'Гость',
         phone: data.phone || '',
@@ -90,7 +91,14 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         lastRouletteSpin: data.last_roulette_spin || null,
         activePrize: data.active_prize || null,
         isOnboarded: !!data.full_name,
-      });
+      };
+
+      const currentState = get();
+      const hasChanged = Object.keys(newData).some((k) => (currentState as any)[k] !== (newData as any)[k]);
+      
+      if (hasChanged) {
+        set(newData);
+      }
     }
     set({ isLoading: false });
   },
@@ -165,6 +173,10 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     if (prize !== 'Следующий раз повезет' && prize !== 'Банкрот') {
       updates.active_prize = prize;
       set({ activePrize: prize });
+    } else {
+      // Банкрот or no-prize: clear any previously active prize
+      updates.active_prize = null;
+      set({ activePrize: null });
     }
 
     await supabase.from('profiles').update(updates).eq('id', id);

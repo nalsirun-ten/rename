@@ -65,7 +65,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
       <div ref={sheetRef} className="rs-sheet sheet-base flex-col" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
         {/* ── Header ── */}
-        <div className="flex-between" style={{ padding: '24px 16px 16px', flexShrink: 0 }}>
+        <div className="flex-between" style={{ padding: '16px 16px 8px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <h2 style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
               {tag || t('news_category_info')}

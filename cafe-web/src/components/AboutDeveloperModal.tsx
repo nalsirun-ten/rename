@@ -18,7 +18,7 @@ export default function AboutDeveloperModal({ onClose }: Props) {
     <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
       <div ref={sheetRef} className="rs-sheet sheet-base" style={{ backgroundColor: '#FCFBFA', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 16px 16px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 8px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <h2 style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
               {t('about_dev_title')}

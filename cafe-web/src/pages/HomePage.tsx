@@ -16,7 +16,6 @@ export default function HomePage() {
     await Promise.all([
       useMenuStore.getState().fetchMenuItems(true),
       useNewsStore.getState().fetchNews(true),
-      useBranchesStore.getState().fetchBranches(true),
       useStoriesStore.getState().fetchStories(true),
       useReviewsStore.getState().fetchReviews(true),
       ...(profileId ? [useProfileStore.getState().fetchProfile(profileId)] : []),

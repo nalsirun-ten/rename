@@ -1,0 +1,257 @@
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useProfileStore } from '../stores/profile';
+import { supabase } from '../lib/supabase';
+import EditProfileModal from '../components/EditProfileModal';
+import LanguageModal from '../components/LanguageModal';
+import { useT } from '../i18n/useT';
+import { useNavigationStore } from '../stores/navigation';
+
+// Lazy modals
+const AboutCafeModal = lazy(() => import('../components/AboutCafeModal'));
+const AboutAppModal = lazy(() => import('../components/AboutAppModal'));
+const AboutDeveloperModal = lazy(() => import('../components/AboutDeveloperModal'));
+const FAQModal = lazy(() => import('../components/FAQModal'));
+const VacanciesModal = lazy(() => import('../components/VacanciesModal'));
+const ConfirmLogoutModal = lazy(() => import('../components/ConfirmLogoutModal'));
+const InstagramModal = lazy(() => import('../components/InstagramModal'));
+const WhatsAppModal = lazy(() => import('../components/WhatsAppModal'));
+
+export default function ProfilePage() {
+  const { name, phone, photo, visits, loyaltyNumber } = useProfileStore();
+  const t = useT();
+  const activeTab = useNavigationStore((s) => s.activeTab);
+
+  const [isAboutCafeOpen, setIsAboutCafeOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isAboutAppOpen, setIsAboutAppOpen] = useState(false);
+  const [isAboutDeveloperOpen, setIsAboutDeveloperOpen] = useState(false);
+  const [isVacanciesOpen, setIsVacanciesOpen] = useState(false);
+  const [isInstagramOpen, setIsInstagramOpen] = useState(false);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
+  const [isFAQOpen, setIsFAQOpen] = useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+
+  // Prefetch lazy modals
+  useEffect(() => {
+    import('../components/AboutCafeModal');
+    import('../components/AboutAppModal');
+    import('../components/AboutDeveloperModal');
+    import('../components/FAQModal');
+    import('../components/VacanciesModal');
+    import('../components/ConfirmLogoutModal');
+    import('../components/InstagramModal');
+    import('../components/WhatsAppModal');
+  }, []);
+
+  const firstLetter = name ? name.charAt(0).toUpperCase() : '?';
+
+  const MENU_ITEMS = [
+    { icon: 'local_cafe', label: 'О кофейне', action: () => setIsAboutCafeOpen(true) },
+    { icon: 'code', label: 'О разработчике', action: () => setIsAboutDeveloperOpen(true) },
+    { icon: 'help', label: 'Вопросы и ответы', action: () => setIsFAQOpen(true) },
+    { icon: 'share', label: 'Поделиться приложением', action: () => {
+      if (navigator.share) {
+        navigator.share({
+          title: 'Cafe',
+          text: 'Попробуйте Cafe — удобное приложение для любителей кофе! ☕',
+          url: window.location.origin
+        }).catch(console.error);
+      }
+    } },
+    { icon: 'info', label: 'О приложении', action: () => setIsAboutAppOpen(true) },
+  ];
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      backgroundColor: '#FEF9F5',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+    }}>
+      {/* ─── Header Background ─── */}
+      <div style={{
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+        paddingBottom: '80px', // Extra padding for overlapping card
+        backgroundColor: '#1B5E3D',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        {/* Title */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+          <span style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 700, color: '#FFF' }}>
+            Профиль
+          </span>
+        </div>
+      </div>
+
+      {/* ─── Body ─── */}
+      <div style={{ flex: 1, position: 'relative', zIndex: 2, padding: '0 16px 100px 16px', marginTop: '-60px' }}>
+        
+        {/* Profile Card Overlapping */}
+        <div style={{
+          backgroundColor: '#FFF',
+          borderRadius: 24,
+          padding: '24px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          marginBottom: 24
+        }}>
+          <div className="flex-center" style={{
+            width: 88,
+            height: 88,
+            borderRadius: '50%',
+            backgroundColor: '#1B5E3D',
+            color: '#FFF',
+            fontSize: 'clamp(32px, 8.1vw, 42px)',
+            fontWeight: 800,
+            boxShadow: '0 4px 16px rgba(27, 94, 61, 0.3)',
+            overflow: 'hidden',
+            marginBottom: 16
+          }}>
+            {photo ? (
+              <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              firstLetter
+            )}
+          </div>
+          <h3 style={{ fontSize: 'clamp(24px, 6.1vw, 34px)', fontWeight: 800, color: '#0F172A', marginBottom: 4, textAlign: 'center' }}>
+            {name}
+          </h3>
+          <p style={{ fontSize: 'clamp(16px, 4vw, 22px)', fontWeight: 500, color: '#64748B', marginBottom: 16 }}>
+            {phone}
+          </p>
+          <button 
+            className="btn-reset flex-center" 
+            onClick={() => setIsEditProfileOpen(true)}
+            style={{
+              padding: '12px 24px',
+              borderRadius: 24,
+              backgroundColor: '#ECFDF5',
+              color: '#10B981',
+              fontSize: 'clamp(16px, 4vw, 22px)',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}
+          >
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)' }}>edit</span>
+            Редактировать
+          </button>
+
+          {/* Stats */}
+          <div style={{ display: 'flex', width: '100%', marginTop: 24, paddingTop: 24, borderTop: '1px solid #F1F5F9' }}>
+            <div style={{ flex: 1, textAlign: 'center', borderRight: '1px solid #F1F5F9' }}>
+              <div style={{ fontSize: 'clamp(28px, 7.1vw, 38px)', fontWeight: 800, color: '#1B5E3D', marginBottom: 4 }}>{loyaltyNumber || 0}</div>
+              <div style={{ fontSize: 'clamp(14px, 3.6vw, 18px)', color: '#94A3B8', fontWeight: 500 }}>Баллов</div>
+            </div>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ fontSize: 'clamp(28px, 7.1vw, 38px)', fontWeight: 800, color: '#1B5E3D', marginBottom: 4 }}>{visits || 0}</div>
+              <div style={{ fontSize: 'clamp(14px, 3.6vw, 18px)', color: '#94A3B8', fontWeight: 500 }}>Визитов</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Settings */}
+        <div style={{
+          backgroundColor: '#FFF',
+          borderRadius: 20,
+          padding: '8px 16px',
+          marginBottom: 24,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+        }}>
+          <button className="btn-reset" onClick={() => setIsLanguageOpen(true)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #F1F5F9' }}>
+            <div className="flex-center" style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F0FDF4', marginRight: 16 }}>
+               <span style={{ fontSize: 'clamp(18px, 4.6vw, 24px)' }}>🇷🇺</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(17px, 4.3vw, 23px)', fontWeight: 600, color: '#1E293B' }}>Язык</span>
+            <span style={{ fontSize: 'clamp(15px, 3.8vw, 21px)', color: '#94A3B8', marginRight: 8 }}>Русский</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6vw, 30px)', color: '#CBD5E1' }}>chevron_right</span>
+          </button>
+          <button className="btn-reset" style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0' }}>
+            <div className="flex-center" style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F0FDF4', marginRight: 16 }}>
+               <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#10B981' }}>light_mode</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(17px, 4.3vw, 23px)', fontWeight: 600, color: '#1E293B' }}>Оформление</span>
+            <span style={{ fontSize: 'clamp(15px, 3.8vw, 21px)', color: '#94A3B8', marginRight: 8 }}>Светлое</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6vw, 30px)', color: '#CBD5E1' }}>chevron_right</span>
+          </button>
+        </div>
+
+        {/* Menu Items */}
+        <div style={{
+          backgroundColor: '#FFF',
+          borderRadius: 20,
+          padding: '8px 16px',
+          marginBottom: 32,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+        }}>
+          {MENU_ITEMS.map((item, index) => (
+            <button
+              key={item.label}
+              onClick={item.action}
+              className="btn-reset"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                width: '100%',
+                padding: '16px 0',
+                borderBottom: index === MENU_ITEMS.length - 1 ? 'none' : '1px solid #F1F5F9',
+              }}
+            >
+              <div className="flex-center" style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F8FAFC', marginRight: 16 }}>
+                <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1vw, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 1" }}>
+                  {item.icon}
+                </span>
+              </div>
+              <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(17px, 4.3vw, 23px)', fontWeight: 600, color: '#1E293B' }}>
+                {item.label}
+              </span>
+              <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6vw, 30px)', color: '#CBD5E1' }}>
+                chevron_right
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Logout */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+          <button onClick={() => setIsLogoutConfirmOpen(true)} className="btn-reset flex-center" style={{ backgroundColor: '#FEF2F2', padding: '18px', borderRadius: 20 }}>
+            <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6vw, 30px)', color: '#EF4444', marginRight: 8 }}>logout</span>
+            <span style={{ fontSize: 'clamp(17px, 4.3vw, 23px)', fontWeight: 700, color: '#EF4444' }}>Выйти из аккаунта</span>
+          </button>
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 'clamp(13px, 3.3vw, 17px)', fontWeight: 500, color: '#94A3B8' }}>
+            Cafe v1.0.2
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {isEditProfileOpen && <EditProfileModal onClose={() => setIsEditProfileOpen(false)} />}
+      {isLanguageOpen && <LanguageModal onClose={() => setIsLanguageOpen(false)} />}
+      
+      <Suspense fallback={null}>
+        {isAboutCafeOpen && <AboutCafeModal onClose={() => setIsAboutCafeOpen(false)} />}
+        {isAboutAppOpen && <AboutAppModal onClose={() => setIsAboutAppOpen(false)} />}
+        {isAboutDeveloperOpen && <AboutDeveloperModal onClose={() => setIsAboutDeveloperOpen(false)} />}
+        {isVacanciesOpen && <VacanciesModal onClose={() => setIsVacanciesOpen(false)} />}
+        {isInstagramOpen && <InstagramModal onClose={() => setIsInstagramOpen(false)} />}
+        {isWhatsAppOpen && <WhatsAppModal onClose={() => setIsWhatsAppOpen(false)} />}
+        {isFAQOpen && <FAQModal onClose={() => setIsFAQOpen(false)} />}
+        {isLogoutConfirmOpen && <ConfirmLogoutModal onClose={() => setIsLogoutConfirmOpen(false)} onConfirm={async () => {
+           await supabase.auth.signOut();
+           window.location.reload();
+        }} />}
+      </Suspense>
+    </div>
+  );
+}

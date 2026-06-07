@@ -153,27 +153,37 @@ export const useBranchesStore = create<BranchesState>()(
       .select('*', { count: 'exact' })
       .range(0, PAGE_SIZE_BRANCHES - 1));
     if (data && !error) {
-      set({
-        branches: data.map((b: any) => {
-          const [openTime, closeTime] = parseWorkingHours(b.working_hours);
-          return {
-            id: b.id,
-            title: b.name,
-            address: b.address,
-            openTime,
-            closeTime,
-            type: ((b.type === 'takeaway' || b.type === 'Точка на вынос') ? 'Точка на вынос' : 'Кофейня') as BranchType,
-            imageUrl: b.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400',
-            isOpen: b.is_active !== false,
-            isSaved: !!get().savedBranchIds[b.id],
-            latitude: b.latitude ?? null,
-            longitude: b.longitude ?? null,
-            weeklySchedule: b.weekly_schedule || undefined,
-          };
-        }),
-        hasMore: (count ?? 0) > PAGE_SIZE_BRANCHES,
-        lastFetchedAt: Date.now(),
+      const newBranchesList = data.map((b: any) => {
+        const [openTime, closeTime] = parseWorkingHours(b.working_hours);
+        return {
+          id: b.id,
+          title: b.name,
+          address: b.address,
+          openTime,
+          closeTime,
+          type: ((b.type === 'takeaway' || b.type === 'Точка на вынос') ? 'Точка на вынос' : 'Кофейня') as BranchType,
+          imageUrl: b.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400',
+          isOpen: b.is_active !== false,
+          isSaved: !!get().savedBranchIds[b.id],
+          latitude: b.latitude ?? null,
+          longitude: b.longitude ?? null,
+          weeklySchedule: b.weekly_schedule || undefined,
+        };
       });
+
+      const currentBranchesStr = JSON.stringify(get().branches);
+      const newBranchesStr = JSON.stringify(newBranchesList);
+      const newHasMore = (count ?? 0) > PAGE_SIZE_BRANCHES;
+
+      if (currentBranchesStr !== newBranchesStr || get().hasMore !== newHasMore) {
+        set({
+          branches: newBranchesList,
+          hasMore: newHasMore,
+          lastFetchedAt: Date.now(),
+        });
+      } else {
+        set({ lastFetchedAt: Date.now() });
+      }
     }
     set({ isLoading: false, error: null });
   },

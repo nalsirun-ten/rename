@@ -10,22 +10,7 @@ interface Props {
   onClose: () => void;
 }
 
-// ─── Skeleton placeholder for smooth GPU-accelerated sheet animation ───
-function TierModalSkeleton() {
-  return (
-    <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Progress card skeleton */}
-      <div style={{ height: 120, borderRadius: 24, background: 'linear-gradient(135deg, #374151 0%, #1F2937 100%)', opacity: 0.6 }} />
-      {/* Timeline skeletons */}
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} style={{ display: 'flex', gap: 12 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E2E8F0', opacity: 0.3, flexShrink: 0 }} />
-          <div style={{ flex: 1, height: 52, borderRadius: 24, background: '#F1F5F9', opacity: 0.5 }} />
-        </div>
-      ))}
-    </div>
-  );
-}
+
 
 export default function TierModal({ onClose }: Props) {
   const t = useT();
@@ -35,12 +20,6 @@ export default function TierModal({ onClose }: Props) {
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);
 
-  // Defer heavy content render to avoid blocking first animation frame
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
 
   // Progress logic
   const nextReward = getNextReward(visits);
@@ -73,20 +52,23 @@ export default function TierModal({ onClose }: Props) {
     <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
       <div
         ref={sheetRef}
-        className="rs-sheet sheet-base flex-col"
+        className="rs-sheet flex-col"
         style={{
-          height: '70vh',
+          width: '100%', maxWidth: 430,
+          borderTopLeftRadius: 32, borderTopRightRadius: 32,
+          overflow: 'hidden',
+          height: '80vh',
           backgroundColor: '#FCFBFA',
         }}
       >
 
         {/* Header */}
-        <div className="flex-between" style={{ padding: '24px 16px 16px', flexShrink: 0 }}>
+        <div className="flex-between" style={{ padding: '16px 16px 8px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
             <h2 style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
               {t('rewards_title')}
             </h2>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E' }} />
+            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
           </div>
           <button
             className="btn-reset flex-center"
@@ -98,108 +80,103 @@ export default function TierModal({ onClose }: Props) {
         </div>
 
         {/* Scrollable Content */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
-
-        {!mounted ? <TierModalSkeleton /> : (<>
-        {/* Progress Counter Card */}
-        <div style={{ padding: '0 16px 20px' }}>
-          <div style={{
-            borderRadius: 24, border: '2px solid #374151',
-            background: 'linear-gradient(135deg, #374151 0%, #1F2937 100%)',
-            padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
-                <span style={{ fontSize: 'clamp(24px, 6.1rem, 36px)', fontWeight: 600, color: '#FFF', lineHeight: 1 }}>{visits}</span>
-                <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{' / '}{nextReward.visits}</span>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}>
+          {/* Progress Counter Card */}
+          <div style={{ padding: '0 16px 20px' }}>
+            <div style={{
+              borderRadius: 24, border: '2px solid #374151',
+              background: 'linear-gradient(135deg, #374151 0%, #1F2937 100%)',
+              padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
+                  <span style={{ fontSize: 'clamp(24px, 6.1rem, 36px)', fontWeight: 600, color: '#FFF', lineHeight: 1 }}>{visits}</span>
+                  <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{' / '}{nextReward.visits}</span>
+                </div>
+                <span style={{ fontSize: 'clamp(16px, 4rem, 24px)', fontWeight: 600, color: '#FFF', paddingLeft: 8 }}>-{remaining} {t('visits_abbr')}</span>
               </div>
-              <span style={{ fontSize: 'clamp(16px, 4rem, 24px)', fontWeight: 600, color: '#FFF', paddingLeft: 8 }}>-{remaining} {t('visits_abbr')}</span>
-            </div>
 
-            <div style={{ height: 8, width: '100%', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', flexShrink: 0 }}>
-              <div style={{ height: '100%', width: `${progress * 100}%`, backgroundColor: '#FFF', borderRadius: 4 }} />
-            </div>
+              <div style={{ height: 8, width: '100%', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', flexShrink: 0 }}>
+                <div style={{ height: '100%', width: `${progress * 100}%`, backgroundColor: '#FFF', borderRadius: 4 }} />
+              </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-              <span style={{ fontSize: 'clamp(16px, 4rem, 20px)', fontWeight: 800, color: '#FFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
-                {t(nextReward.nameKey as any)}
-              </span>
-              <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', fontWeight: 800, color: '#FFF', flexShrink: 0 }}>{t('reward_next')}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                <span style={{ fontSize: 'clamp(16px, 4rem, 20px)', fontWeight: 800, color: '#FFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
+                  {t(nextReward.nameKey as any)}
+                </span>
+                <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', fontWeight: 800, color: '#FFF', flexShrink: 0 }}>{t('reward_next')}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Content (Timeline) */}
-        <div style={{ padding: '0 16px', flex: 1, overflowY: 'auto' }}>
-          <div style={{ position: 'relative', animation: 'stamps-modal-fade-in 0.2s ease-out' }}>
-            {displayRewards.map((reward, index) => {
-                const isAchieved = visits >= reward.visits;
-                const isNext = !isAchieved && (index === 0 || visits >= displayRewards[index - 1].visits);
+          {/* Content (Timeline) */}
+          <div style={{ padding: '0 16px' }}>
+            <div style={{ position: 'relative' }}>
+              {displayRewards.map((reward, index) => {
+                  const isAchieved = visits >= reward.visits;
+                  const isNext = !isAchieved && (index === 0 || visits >= displayRewards[index - 1].visits);
 
-                const color = isAchieved ? '#22C55E' : isNext ? '#3B82F6' : '#94A3B8';
-                const bg = isAchieved ? '#F0FDF4' : isNext ? '#EFF6FF' : '#F8FAFC';
-                const iconName = isAchieved ? 'check_circle' : isNext ? 'redeem' : 'lock';
+                  const color = isAchieved ? '#22C55E' : isNext ? '#3B82F6' : '#94A3B8';
+                  const bg = isAchieved ? '#F0FDF4' : isNext ? '#EFF6FF' : '#F8FAFC';
+                  const iconName = isAchieved ? 'check_circle' : isNext ? 'redeem' : 'lock';
 
-                return (
-                  <div key={reward.visits} style={{ display: 'flex', gap: 12, marginBottom: index === displayRewards.length - 1 ? 0 : 12, position: 'relative', zIndex: 1 }}>
-                    {/* Icon Column */}
-                    <div style={{ position: 'relative', flexShrink: 0, marginTop: 'clamp(6px, 2rem, 12px)' }}>
-                      {index !== displayRewards.length - 1 && (
+                  return (
+                    <div key={reward.visits} style={{ display: 'flex', gap: 12, marginBottom: index === displayRewards.length - 1 ? 0 : 12, position: 'relative', zIndex: 1 }}>
+                      {/* Icon Column */}
+                      <div style={{ position: 'relative', flexShrink: 0, marginTop: 'clamp(6px, 2rem, 12px)' }}>
+                        {index !== displayRewards.length - 1 && (
+                          <div style={{
+                            position: 'absolute',
+                            top: 'clamp(40px, 12.3rem, 60px)', bottom: 'calc(clamp(18px, 5.1rem, 28px) * -1)', left: 'calc(clamp(40px, 12.3rem, 60px) / 2 - 2px)',
+                            width: 4, backgroundColor: isAchieved ? '#22C55E' : '#E2E8F0', zIndex: -1
+                          }} />
+                        )}
                         <div style={{
-                          position: 'absolute',
-                          top: 'clamp(40px, 12.3rem, 60px)', bottom: 'calc(clamp(18px, 5.1rem, 28px) * -1)', left: 'calc(clamp(40px, 12.3rem, 60px) / 2 - 2px)',
-                          width: 4, backgroundColor: isAchieved ? '#22C55E' : '#E2E8F0', zIndex: -1
-                        }} />
-                      )}
-                      <div style={{
-                        width: 'clamp(40px, 12.3rem, 60px)', height: 'clamp(40px, 12.3rem, 60px)', borderRadius: '50%',
-                        backgroundColor: bg,
-                        border: `2px solid ${color}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                      }}>
-                        <span className="icon-material" style={{ fontSize: 'clamp(20px, 6.1rem, 32px)', color: color, fontVariationSettings: "'FILL' 1" }}>
-                          {iconName}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Card Column */}
-                    <div style={{
-                      flex: 1, backgroundColor: isAchieved ? '#FFFFFF' : '#FEF9F5',
-                      borderRadius: 24, padding: '12px 16px',
-                      border: isNext ? `1.5px solid ${color}` : `1.5px solid ${isAchieved ? '#22C55E' : '#E2E8F0'}`,
-                      boxShadow: isNext ? `0 4px 12px rgba(59, 130, 246, 0.25)` : '0 4px 12px rgba(0,0,0,0.05)',
-                      opacity: isAchieved || isNext ? 1 : 0.7
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <span style={{ fontSize: 'clamp(16px, 4rem, 20px)', fontWeight: 800, color: '#1E293B' }}>
-                          {t(reward.nameKey as any)}
-                        </span>
-                        <div style={{
-                          padding: '4px 10px', borderRadius: 10,
-                          backgroundColor: color,
+                          width: 'clamp(40px, 12.3rem, 60px)', height: 'clamp(40px, 12.3rem, 60px)', borderRadius: '50%',
+                          backgroundColor: bg,
+                          border: `2px solid ${color}`,
                           display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
-                          <span style={{ fontSize: 'clamp(12px, 3rem, 15px)', fontWeight: 800, color: '#FFF', lineHeight: 1 }}>
-                            {reward.visits} {t('visits_abbr')}
+                          <span className="icon-material" style={{ fontSize: 'clamp(20px, 6.1rem, 32px)', color: color, fontVariationSettings: "'FILL' 1" }}>
+                            {iconName}
                           </span>
                         </div>
                       </div>
-                      <p style={{ fontSize: 'clamp(13px, 3.3rem, 16px)', color: '#94A3B8', margin: 0, lineHeight: 1.4, fontWeight: 500 }}>
-                        {isAchieved
-                          ? t('reward_achieved')
-                          : isNext
-                            ? `${t('reward_visits_left')}: ${reward.visits - visits}`
-                            : t('reward_next')}
-                      </p>
+
+                      {/* Card Column */}
+                      <div style={{
+                        flex: 1, backgroundColor: isAchieved ? '#FFFFFF' : '#FEF9F5',
+                        borderRadius: 24, padding: '12px 16px',
+                        border: isNext ? `1.5px solid ${color}` : `1.5px solid ${isAchieved ? '#22C55E' : '#E2E8F0'}`,
+                        opacity: isAchieved || isNext ? 1 : 0.7
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: 'clamp(16px, 4rem, 20px)', fontWeight: 800, color: '#1E293B' }}>
+                            {t(reward.nameKey as any)}
+                          </span>
+                          <div style={{
+                            padding: '4px 10px', borderRadius: 10,
+                            backgroundColor: color,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            <span style={{ fontSize: 'clamp(12px, 3rem, 15px)', fontWeight: 800, color: '#FFF', lineHeight: 1 }}>
+                              {reward.visits} {t('visits_abbr')}
+                            </span>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: 'clamp(13px, 3.3rem, 16px)', color: '#94A3B8', margin: 0, lineHeight: 1.4, fontWeight: 500 }}>
+                          {isAchieved
+                            ? t('reward_achieved')
+                            : isNext
+                              ? `${t('reward_visits_left')}: ${reward.visits - visits}`
+                              : t('reward_next')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
-        </div>
-        </>)}
+          </div>
         </div>
       </div>
     </div>,

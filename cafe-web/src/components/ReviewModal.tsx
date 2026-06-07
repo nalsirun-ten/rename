@@ -127,7 +127,7 @@ export default function ReviewModal({ onClose }: Props) {
       <div ref={sheetRef} className="rs-sheet sheet-base review-sheet-transition" style={{ maxHeight: step === 1 ? '60vh' : '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {step === 1 && (
           <>
-            <div style={{ padding: '24px 16px 16px', backgroundColor: '#FEF9F5', zIndex: 10, flexShrink: 0 }}>
+            <div style={{ padding: '16px 16px 8px', backgroundColor: '#FEF9F5', zIndex: 10, flexShrink: 0 }}>
               <div className="flex-between">
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <h2 style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8, textTransform: 'uppercase' }}>
@@ -173,7 +173,7 @@ export default function ReviewModal({ onClose }: Props) {
 
         {step === 2 && selectedBranch && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', padding: '24px 16px 16px', backgroundColor: '#FEF9F5', zIndex: 10, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 8px', backgroundColor: '#FEF9F5', zIndex: 10, flexShrink: 0 }}>
               <button className="btn-reset flex-center" onClick={() => setStep(1)} style={{ width: 'clamp(40px, 10.2rem, 56px)', height: 'clamp(40px, 10.2rem, 56px)', borderRadius: '50%', backgroundColor: '#F1F5F9', marginRight: 16, flexShrink: 0 }}>
                 <span className="icon-material" style={{ fontSize: 'clamp(24px, 6.1rem, 34px)', color: '#0F172A' }}>arrow_back</span>
               </button>
@@ -217,7 +217,7 @@ export default function ReviewModal({ onClose }: Props) {
 
         {step === 3 && selectedBranch && selectedTarget && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', padding: '24px 16px 16px', backgroundColor: '#FEF9F5', zIndex: 10, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 8px', backgroundColor: '#FEF9F5', zIndex: 10, flexShrink: 0 }}>
               <button className="btn-reset flex-center" onClick={() => setStep(2)} style={{ width: 'clamp(40px, 10.2rem, 56px)', height: 'clamp(40px, 10.2rem, 56px)', borderRadius: '50%', backgroundColor: '#F1F5F9', marginRight: 16, flexShrink: 0 }}>
                 <span className="icon-material" style={{ fontSize: 'clamp(24px, 6.1rem, 34px)', color: '#0F172A' }}>arrow_back</span>
               </button>

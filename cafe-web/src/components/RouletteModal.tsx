@@ -17,14 +17,17 @@ export default function RouletteModal({ onClose }: Props) {
     <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
       <div
         ref={sheetRef}
-        className="rs-sheet sheet-base flex-col"
+        className="rs-sheet flex-col"
         style={{
+          width: '100%', maxWidth: 430,
+          borderTopLeftRadius: 32, borderTopRightRadius: 32,
+          overflow: 'hidden',
           backgroundColor: '#F9FAFC',
           height: '80vh',
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px 4px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 8px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <h2 style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
               Фортуна
@@ -46,7 +49,7 @@ export default function RouletteModal({ onClose }: Props) {
           padding: 0,
           paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)'
         }}>
-          <div style={{ animation: 'stamps-modal-fade-in 0.2s ease-out' }}>
+          <div>
             <Roulette />
           </div>
         </div>

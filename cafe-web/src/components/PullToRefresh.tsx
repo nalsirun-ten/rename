@@ -131,11 +131,21 @@ export default function PullToRefresh({ onRefresh, onScroll, children }: PullToR
       pullDistance.current = THRESHOLD;
       updateIndicator(THRESHOLD, true);
 
-      // Fire refresh in background — do NOT await (keeps UI responsive)
-      onRefresh();
+      // Wait for onRefresh to complete to prevent animation stutter during heavy state updates
+      const startTime = Date.now();
+      const finishRefresh = () => {
+        const elapsed = Date.now() - startTime;
+        const remainingTime = Math.max(0, MIN_SPINNER_MS - elapsed);
+        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = setTimeout(resetPull, remainingTime);
+      };
 
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-      refreshTimerRef.current = setTimeout(resetPull, MIN_SPINNER_MS);
+      const result = onRefresh();
+      if (result instanceof Promise) {
+        result.then(finishRefresh).catch(finishRefresh);
+      } else {
+        finishRefresh();
+      }
     } else {
       pullDistance.current = 0;
       hideIndicator();

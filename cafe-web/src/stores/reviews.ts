@@ -141,8 +141,9 @@ export const useReviewsStore = create<ReviewsState>()(
       },
 
       fetchReviews: async () => {
-        const { searchQuery, filter } = get();
-        set({ isLoading: true, page: 1, error: null });
+        const { searchQuery, filter, reviews } = get();
+        const hasExisting = reviews.length > 0;
+        set({ isLoading: !hasExisting, page: 1, error: null });
         try {
           let query = supabase
             .from('reviews')
@@ -192,11 +193,17 @@ export const useReviewsStore = create<ReviewsState>()(
             likes: r.likes || 0,
             created_at: r.created_at,
           }));
-          set({ 
-            reviews: formatted, 
-            stats: currentStats,
-            hasMore: (count ?? 0) > REVIEWS_PAGE_SIZE 
-          });
+          if (
+            JSON.stringify(get().reviews) !== JSON.stringify(formatted) ||
+            JSON.stringify(get().stats) !== JSON.stringify(currentStats) ||
+            get().hasMore !== ((count ?? 0) > REVIEWS_PAGE_SIZE)
+          ) {
+            set({ 
+              reviews: formatted, 
+              stats: currentStats,
+              hasMore: (count ?? 0) > REVIEWS_PAGE_SIZE 
+            });
+          }
         } catch (err: any) {
           console.error('Error fetching reviews:', err);
           set({ error: err?.message || 'Failed to load reviews' });
