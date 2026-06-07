@@ -73,7 +73,7 @@ export const useNewsStore = create<NewsState>()(
     // Only show skeletons on initial load, not on background refresh
     const hasExisting = get().news.length > 0;
     if (!hasExisting) set({ isLoading: true });
-    const { data, error } = await retry(() => supabase.from('news_posts').select('*').order('created_at', { ascending: false }));
+    const { data, error } = await retry(() => supabase.from('news_posts').select('id, title, content, image_url, created_at').order('created_at', { ascending: false }));
     if (data && !error) {
       const newNews = data.map((item: any) => ({
         id: item.id,

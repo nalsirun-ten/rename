@@ -88,9 +88,9 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         stamps: data.stamps_count || 0,
         loyaltyNumber: data.loyalty_number || '000000',
         photo: data.avatar_url || null,
-        lastRouletteSpin: data.last_roulette_spin || null,
+        lastRouletteSpin: data.last_roulette_spin ? new Date(data.last_roulette_spin).toISOString() : null,
         activePrize: data.active_prize || null,
-        isOnboarded: !!data.full_name,
+        isOnboarded: !!data.full_name || (get().id === data.id && get().isOnboarded),
       };
 
       const currentState = get();
@@ -188,11 +188,12 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         const { messaging } = await import('../lib/firebase');
         const messagingInstance = await messaging();
         if (messagingInstance) {
-          const { getToken } = await import('firebase/messaging');
+          const { getToken, deleteToken } = await import('firebase/messaging');
           const registration = await navigator.serviceWorker.ready;
           const token = await getToken(messagingInstance, { serviceWorkerRegistration: registration });
           if (token) {
             await supabase.from('user_fcm_tokens').delete().eq('token', token);
+            await deleteToken(messagingInstance);
           }
         }
       } catch (e) {
@@ -237,16 +238,22 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
             } else {
               console.log('FCM token saved successfully to user_fcm_tokens.');
               console.log('✅ Токен успешно получен и сохранен!');
+              localStorage.setItem('hasPromptedPush', 'granted');
+              localStorage.setItem('pushEnabled', 'true');
             }
           }
         } else {
           console.log('No registration token available.');
+          localStorage.removeItem('hasPromptedPush');
         }
       } else {
         console.log('Notification permission denied.');
       }
     } catch (error: any) {
       console.error('An error occurred while retrieving token. ', error);
+      // Recovery: if token fetch fails (e.g. Safari user gesture required),
+      // we must reset the prompt state so the PushPromptModal appears again.
+      localStorage.removeItem('hasPromptedPush');
     }
   },
 

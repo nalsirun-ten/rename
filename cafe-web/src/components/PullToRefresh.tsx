@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, forwardRef } from 'react';
 import type { ReactNode } from 'react';
 
 interface PullToRefreshProps {
@@ -18,7 +18,7 @@ const MIN_SPINNER_MS = 500;
  * We only read touch coordinates to drive an absolutely-positioned indicator.
  * No preventDefault(), no passive:false, no native addEventListener.
  */
-export default function PullToRefresh({ onRefresh, onScroll, children }: PullToRefreshProps) {
+const PullToRefresh = forwardRef<HTMLDivElement, PullToRefreshProps>(({ onRefresh, onScroll, children }, ref) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshingRef = useRef(false);
   const pullDistance = useRef(0);
@@ -26,12 +26,22 @@ export default function PullToRefresh({ onRefresh, onScroll, children }: PullToR
   const startX = useRef(0);
   const isHorizontalSwipe = useRef(false);
   const isVerticalSwipe = useRef(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const internalContainerRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLSpanElement>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Expose the ref to the parent if provided, otherwise use internal
+  const handleRef = useCallback((node: HTMLDivElement) => {
+    internalContainerRef.current = node;
+    if (typeof ref === 'function') {
+      ref(node);
+    } else if (ref) {
+      ref.current = node;
+    }
+  }, [ref]);
 
-  const getScrollTop = () => containerRef.current?.scrollTop ?? 0;
+  const getScrollTop = () => internalContainerRef.current?.scrollTop ?? 0;
 
   // ── Animate indicator via direct DOM (no React re-render) ──
   const updateIndicator = useCallback((distance: number, snap = false) => {
@@ -75,7 +85,7 @@ export default function PullToRefresh({ onRefresh, onScroll, children }: PullToR
   // ── Touch handlers (React synthetic, passive — zero scroll interference) ──
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (!containerRef.current?.contains(e.target as Node)) return;
+    if (!internalContainerRef.current?.contains(e.target as Node)) return;
     if (getScrollTop() <= 0 && !refreshingRef.current) {
       startY.current = e.touches[0].clientY;
       startX.current = e.touches[0].clientX;
@@ -156,7 +166,7 @@ export default function PullToRefresh({ onRefresh, onScroll, children }: PullToR
 
   return (
     <div
-      ref={containerRef}
+      ref={handleRef}
       onScroll={onScroll}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -215,4 +225,6 @@ export default function PullToRefresh({ onRefresh, onScroll, children }: PullToR
       </div>
     </div>
   );
-}
+});
+
+export default PullToRefresh;

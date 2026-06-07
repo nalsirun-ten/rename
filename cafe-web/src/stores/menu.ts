@@ -59,7 +59,27 @@ const POPULAR_CATEGORIES = [
   'Роллы',
   'Закуски',
   'Гарниры',
-  'Соусы'
+  'Соусы',
+  'Фреши',
+  'Смузи',
+  'Молочные коктейли',
+  'Детское меню',
+  'Бизнес-ланчи',
+  'Вегетарианское меню',
+  'Мороженое',
+  'Блины и панкейки',
+  'Стейки',
+  'Гриль и мангал',
+  'Боулы и Поке',
+  'Морепродукты',
+  'WOK',
+  'Шаурма и Донеры',
+  'Хот-доги',
+  'Пироги',
+  'Сеты',
+  'Сезонное меню',
+  'Алкогольные коктейли',
+  'Соки и Воды'
 ];
 
 function normalizeCategory(dbCategory: string | null | undefined): string {
@@ -111,7 +131,7 @@ export const useMenuStore = create<MenuState>()(
     try {
       const itemsRes = await retry(() => supabase
         .from('menu_items')
-        .select('*', { count: 'exact' })
+        .select('id, name, description, price, image_url, category, calories', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE_MENU - 1));
 
@@ -164,7 +184,7 @@ export const useMenuStore = create<MenuState>()(
     try {
       const { data, error, count } = await retry(() => supabase
         .from('menu_items')
-        .select('*', { count: 'exact' })
+        .select('id, name, description, price, image_url, category, calories', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to));
       if (data && !error) {

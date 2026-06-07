@@ -16,6 +16,8 @@ import { useNavigationStore } from './stores/navigation';
 import { useToastStore } from './stores/toast';
 import Toast from './components/Toast';
 import { useT } from './i18n/useT';
+import { useLanguageStore } from './stores/language';
+import { loadLanguage } from './i18n/translations';
 import { VAPID_KEY } from './lib/firebase';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -46,8 +48,13 @@ function loadPrivateData(userId: string) {
 
 export default function App() {
   const t = useT();
+  const language = useLanguageStore((s) => s.language);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadLanguage(language);
+  }, [language]);
 
   useEffect(() => {
     // Fire public data immediately — don't wait for auth

@@ -22,3 +22,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary scripts, keys, and test files
+*.py
+*.cjs
+test_*.js
+test-*.js
+check_*.js
+patch_*.js
+fix_*.js
+update_*.js
+inject_*.js
+seed.js
+execute.js
+service-account.json
+.firebase/
+.recovery/
+recovered_profile.txt
+swagger.json

@@ -53,11 +53,32 @@ const sendFcmMessage = async (token: string, title: string, body: string, notifi
           body: body || '',
           ...(imageUrl ? { image: imageUrl } : {})
         },
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            default_sound: true,
+            default_vibrate_timings: true,
+            default_light_settings: true
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1
+            }
+          }
+        },
         webpush: {
+          headers: {
+            Urgency: 'high'
+          },
           notification: {
             title: title || 'Новое уведомление',
             body: body || '',
             icon: "https://dentapp-18e25.web.app/icons/icon-192x192.png",
+            requireInteraction: true,
             ...(imageUrl ? { image: imageUrl } : {})
           },
           fcm_options: {

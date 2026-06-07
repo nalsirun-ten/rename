@@ -17,6 +17,7 @@ export interface Review {
   images?: string[];
   likes: number;
   created_at: string;
+  category?: string;
 }
 
 import { supabase } from '../lib/supabase';
@@ -113,7 +114,7 @@ interface ReviewsState {
   fetchReviews: (force?: boolean) => Promise<void>;
   fetchMoreReviews: () => Promise<void>;
   fetchLikedReviews: (userId: string) => Promise<void>;
-  addReview: (review: { rating: number; text: string; branch_id: string; user_id?: string; guest_name?: string; guest_avatar?: string }) => Promise<void>;
+  addReview: (review: { rating: number; text: string; branch_id: string; user_id?: string; guest_name?: string; guest_avatar?: string; category?: string }) => Promise<void>;
 }
 
 export const useReviewsStore = create<ReviewsState>()(
@@ -147,7 +148,7 @@ export const useReviewsStore = create<ReviewsState>()(
         try {
           let query = supabase
             .from('reviews')
-            .select('*, user:profiles!reviews_user_id_fkey(id, full_name, avatar_url)', { count: 'exact' });
+            .select('id, rating, text, guest_name, guest_avatar, category, images, likes, created_at, user:profiles!reviews_user_id_fkey(id, full_name, avatar_url)', { count: 'exact' });
 
           if (searchQuery.trim()) {
             // we search by guest_name and text for simplicity
@@ -192,6 +193,7 @@ export const useReviewsStore = create<ReviewsState>()(
             images: r.images,
             likes: r.likes || 0,
             created_at: r.created_at,
+            category: r.category,
           }));
           if (
             JSON.stringify(get().reviews) !== JSON.stringify(formatted) ||
@@ -224,7 +226,7 @@ export const useReviewsStore = create<ReviewsState>()(
         try {
           let query = supabase
             .from('reviews')
-            .select('*, user:profiles!reviews_user_id_fkey(id, full_name, avatar_url)', { count: 'exact' });
+            .select('id, rating, text, guest_name, guest_avatar, category, images, likes, created_at, user:profiles!reviews_user_id_fkey(id, full_name, avatar_url)', { count: 'exact' });
 
           if (searchQuery.trim()) {
             query = query.or(`guest_name.ilike.%${searchQuery.trim()}%,text.ilike.%${searchQuery.trim()}%`);
@@ -256,6 +258,7 @@ export const useReviewsStore = create<ReviewsState>()(
             images: r.images,
             likes: r.likes || 0,
             created_at: r.created_at,
+            category: r.category,
           }));
           set({
             reviews: [...reviews, ...formatted],
@@ -332,9 +335,10 @@ export const useReviewsStore = create<ReviewsState>()(
           user_id: reviewPayload.user_id || null,
           guest_name: reviewPayload.guest_name || null,
           guest_avatar: reviewPayload.guest_avatar || null,
+          category: reviewPayload.category || null,
           likes: 0
         }
-      ]).select('*, user:profiles!reviews_user_id_fkey(id, full_name, avatar_url)').single());
+      ]).select('id, rating, text, guest_name, guest_avatar, category, images, likes, created_at, user:profiles!reviews_user_id_fkey(id, full_name, avatar_url)').single());
       
       if (error) throw error;
       
@@ -351,6 +355,7 @@ export const useReviewsStore = create<ReviewsState>()(
           images: data.images,
           likes: data.likes || 0,
           created_at: data.created_at,
+          category: data.category,
         };
         set({ reviews: [newReview, ...state.reviews] });
       }

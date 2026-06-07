@@ -150,7 +150,7 @@ export const useBranchesStore = create<BranchesState>()(
     set({ isLoading: !hasExisting, hasMore: true });
     const { data, error, count } = await retry(() => supabase
       .from('branches')
-      .select('*', { count: 'exact' })
+      .select('id, name, address, working_hours, type, image_url, is_active, latitude, longitude, weekly_schedule', { count: 'exact' })
       .range(0, PAGE_SIZE_BRANCHES - 1));
     if (data && !error) {
       const newBranchesList = data.map((b: any) => {
@@ -197,7 +197,7 @@ export const useBranchesStore = create<BranchesState>()(
     const to = from + PAGE_SIZE_BRANCHES - 1;
     const { data, error, count } = await retry(() => supabase
       .from('branches')
-      .select('*', { count: 'exact' })
+      .select('id, name, address, working_hours, type, image_url, is_active, latitude, longitude, weekly_schedule', { count: 'exact' })
       .range(from, to));
     if (data && !error) {
       const newBranches = data.map((b: any) => {

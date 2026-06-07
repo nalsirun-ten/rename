@@ -20,11 +20,13 @@ export default function PushPromptModal() {
     let hasPrompted = localStorage.getItem('hasPromptedPush');
     
     // 3. Notification permission should be 'default' (meaning we can ask)
-    const canAsk = 'Notification' in window && (Notification as any).permission === 'default';
+    // OR it is 'granted' but hasPrompted is null (meaning the token sync failed and we need a manual click to recover)
+    const systemPermission = 'Notification' in window ? (Notification as any).permission : 'denied';
+    const canAsk = systemPermission === 'default' || (systemPermission === 'granted' && !hasPrompted);
 
     // Recovery mechanism: if they got stuck (scrolled away from native prompt), hasPrompted might be 'true'
     // but the system permission is still 'default'. In this case, we clear it so they can be asked again.
-    if (hasPrompted === 'true' && canAsk) {
+    if (hasPrompted === 'true' && systemPermission === 'default') {
       hasPrompted = null;
       localStorage.removeItem('hasPromptedPush');
     }

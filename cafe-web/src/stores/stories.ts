@@ -61,7 +61,7 @@ export const useStoriesStore = create<StoriesState>()(
     try {
       const { data, error } = await retry(() => supabase
         .from('stories')
-        .select('*')
+        .select('id, title, category, image_url, video_url, description, created_at')
         .order('created_at', { ascending: false })
         .limit(STORIES_PAGE_SIZE));
 

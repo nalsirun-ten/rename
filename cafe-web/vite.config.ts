@@ -42,13 +42,12 @@ export default defineConfig({
             expiration: { maxEntries: 30, maxAgeSeconds: 31536000 },
           },
         }, {
-          // Supabase REST API — NetworkFirst: fresh data when online, cached when offline
+          // Supabase REST API — StaleWhileRevalidate: instant cache + background fetch
           urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-          handler: 'NetworkFirst',
+          handler: 'StaleWhileRevalidate',
           options: {
             cacheName: 'supabase-api',
             expiration: { maxEntries: 200, maxAgeSeconds: 3600 },
-            networkTimeoutSeconds: 5,
           },
         }, {
           // Supabase Storage (images, avatars) — CacheFirst: rarely changes

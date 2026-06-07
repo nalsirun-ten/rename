@@ -11,6 +11,7 @@ import { useLanguageStore } from '../stores/language';
 import { useNavigationStore } from '../stores/navigation';
 import { useMenuStore } from '../stores/menu';
 import { useReviewsStore } from '../stores/reviews';
+import { VAPID_KEY } from '../lib/firebase';
 
 // ─── Lazy modals — loaded in background after ProfilePage opens ───
 const AboutCafeModal = lazy(() => import('../components/AboutCafeModal'));
@@ -286,6 +287,14 @@ export default function ProfilePage() {
             }} />
           </div>
 
+          <button className="btn-reset" onClick={() => useProfileStore.getState().requestPushPermission(VAPID_KEY)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #CBD5E1' }}>
+            <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#8B5CF6', marginRight: 12 }}>
+              <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>notifications</span>
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>Включить уведомления</span>
+            <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
+          </button>
+
           
           <button className="btn-reset" onClick={() => setIsAboutCafeOpen(true)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '16px 0', borderBottom: '1px solid #CBD5E1' }}>
             <div className="flex-center" style={{ width: 'clamp(28px, 8.2rem, 38px)', height: 'clamp(28px, 8.2rem, 38px)', borderRadius: 'clamp(6px, 2rem, 10px)', backgroundColor: '#3B82F6', marginRight: 12 }}>
@@ -371,7 +380,7 @@ export default function ProfilePage() {
             onClose={() => setIsLogoutConfirmOpen(false)}
             onConfirm={async () => {
               setIsLogoutConfirmOpen(false);
-              await supabase.auth.signOut();
+              await useProfileStore.getState().signOut();
               clearAuthData();
             }}
           />

@@ -4,6 +4,7 @@ import MenuCard from '../components/MenuCard';
 import PullToRefresh from '../components/PullToRefresh';
 import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n/translations';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 export default function MenuPage() {
   const { items, categories, searchQuery, activeTab, sortBy, setSearchQuery, setActiveTab, setSortBy, fetchMoreMenuItems, page } = useMenuStore();
@@ -14,6 +15,7 @@ export default function MenuPage() {
   const hasMore = useMenuStore(s => s.hasMore);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleRefresh = async () => {
     await useMenuStore.getState().fetchMenuItems(true);
@@ -88,6 +90,13 @@ export default function MenuPage() {
   const VISIBLE_COUNT = page * 8;
   const visibleItems = filteredItems.slice(0, VISIBLE_COUNT);
 
+  const virtualizer = useVirtualizer({
+    count: visibleItems.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 140, // Approximate height of MenuCard including margins
+    overscan: 5,
+  });
+
   return (
       <div
         style={{
@@ -152,7 +161,7 @@ export default function MenuPage() {
 
       {/* ─── Body ─── */}
       <div style={{ flex: 1, minHeight: 0 }}>
-        <PullToRefresh onRefresh={handleRefresh} onScroll={handleScroll}>
+        <PullToRefresh ref={scrollContainerRef} onRefresh={handleRefresh} onScroll={handleScroll}>
           <div 
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -324,9 +333,27 @@ export default function MenuPage() {
                 ))
               ) : filteredItems.length > 0 ? (
                 <>
-                  {visibleItems.map((item) => (
-                    <MenuCard key={item.id} item={item} />
-                  ))}
+                  <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                    {virtualizer.getVirtualItems().map((virtualItem) => {
+                      const item = visibleItems[virtualItem.index];
+                      return (
+                        <div
+                          key={virtualItem.key}
+                          data-index={virtualItem.index}
+                          ref={virtualizer.measureElement}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            transform: `translateY(${virtualItem.start}px)`,
+                          }}
+                        >
+                          <MenuCard item={item} />
+                        </div>
+                      );
+                    })}
+                  </div>
                   {/* Loading more indicator */}
                   {isLoadingMore && (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 0 24px 0', gap: 10 }}>

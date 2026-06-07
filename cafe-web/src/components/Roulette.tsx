@@ -77,6 +77,13 @@ export default function Roulette() {
     setWonPrize(null);
 
     const prizeIndex = pickWeightedIndex();
+    const prize = PRIZES[prizeIndex].label;
+
+    // Optimistically record the spin to prevent data loss if the user closes the app mid-spin
+    if (prize !== 'Ещё попытка') {
+      recordRouletteSpin(prize).catch(console.error);
+    }
+
     // Random offset within the segment so the pointer doesn't always land dead-center
     const randomOffset = 3 + Math.random() * (SLICE_DEG - 6);
     // The absolute angle where the target segment sits under the top pointer (at -90° / 270°).
@@ -114,7 +121,6 @@ export default function Roulette() {
         wheelRef.current.style.transform = `rotate(${newRotation}deg)`;
       }
       setSpinning(false);
-      const prize = PRIZES[prizeIndex].label;
       setWonPrize(prize);
 
       if (prize === 'Ещё попытка') {
@@ -130,23 +136,26 @@ export default function Roulette() {
           const dur = 3000;
           const end = Date.now() + dur;
           const frame = () => {
-            confetti({ particleCount: 7, angle: 60, spread: 65, origin: { x: 0, y: 0.6 }, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A855F7', '#FFFFFF'] });
-            confetti({ particleCount: 7, angle: 120, spread: 65, origin: { x: 1, y: 0.6 }, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A855F7', '#FFFFFF'] });
+            confetti({ particleCount: 7, angle: 60, spread: 65, origin: { x: 0, y: 0.6 }, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A855F7', '#FFFFFF'], zIndex: 10000 });
+            confetti({ particleCount: 7, angle: 120, spread: 65, origin: { x: 1, y: 0.6 }, colors: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A855F7', '#FFFFFF'], zIndex: 10000 });
             if (Date.now() < end) requestAnimationFrame(frame);
           };
           frame();
         });
       }
-
-      await recordRouletteSpin(prize);
     }, 5500);
   };
 
   const hasSpunToday = () => {
     if (!lastRouletteSpin) return false;
     const lastDate = new Date(lastRouletteSpin);
+    if (isNaN(lastDate.getTime())) return false;
     const today = new Date();
-    return lastDate.toDateString() === today.toDateString();
+    return (
+      lastDate.getFullYear() === today.getFullYear() &&
+      lastDate.getMonth() === today.getMonth() &&
+      lastDate.getDate() === today.getDate()
+    );
   };
 
   const getTimeUntilMidnight = () => {
@@ -447,7 +456,18 @@ export default function Roulette() {
             WebkitTapHighlightColor: 'transparent', outline: 'none', padding: 0,
           }}
         >
-          {alreadySpun ? (
+          {spinning ? (
+            <>
+              <span style={{
+                fontSize: 11, fontWeight: 800,
+                color: '#94A3B8',
+                letterSpacing: '1px', textTransform: 'uppercase',
+                textAlign: 'center', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              }}>
+                КРУТИМ
+              </span>
+            </>
+          ) : alreadySpun ? (
             <>
               <span style={{
                 fontSize: 16, fontWeight: 900, color: '#F59E0B',
@@ -467,13 +487,13 @@ export default function Roulette() {
             <>
               <span style={{
                 fontSize: 11, fontWeight: 800,
-                color: spinning ? '#94A3B8' : '#FFD700',
+                color: '#FFD700',
                 letterSpacing: '1px', textTransform: 'uppercase',
                 textAlign: 'center', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.3)',
               }}>
-                {spinning ? 'КРУТИМ' : 'КРУТИТЬ'}
+                КРУТИТЬ
               </span>
-              {!spinning && <span style={{ fontSize: 11, marginTop: 4 }}>🎰</span>}
+              <span style={{ fontSize: 11, marginTop: 4 }}>🎰</span>
             </>
           )}
         </button>

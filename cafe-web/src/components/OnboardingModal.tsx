@@ -3,6 +3,7 @@ import { useProfileStore } from '../stores/profile';
 import { useLanguageStore, type Language } from '../stores/language';
 import { useT } from '../i18n/useT';
 import { supabase } from '../lib/supabase';
+import { loadLanguage } from '../i18n/translations';
 
 export default function OnboardingModal() {
   const t = useT();
@@ -18,6 +19,7 @@ export default function OnboardingModal() {
     setLoading(true);
     
     // Save language
+    await loadLanguage(selectedLang);
     setLanguage(selectedLang);
     
     // Update profile
@@ -115,7 +117,11 @@ export default function OnboardingModal() {
               <button
                 key={l.id}
                 className="btn-reset"
-                onClick={() => setSelectedLang(l.id as Language)}
+                onClick={async () => {
+                  setSelectedLang(l.id as Language);
+                  await loadLanguage(l.id as Language);
+                  setLanguage(l.id as Language);
+                }}
                 style={{
                   flex: 1,
                   padding: '12px 0',

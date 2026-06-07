@@ -76,8 +76,10 @@ export default function ReviewModal({ onClose }: Props) {
     
     // Prefix text with category or staff if selected
     let finalPrefix = '';
+    let categoryName = undefined;
     if (selectedTarget.type === 'category') {
       finalPrefix = `[${t(selectedTarget.item.nameKey)}] `;
+      categoryName = t(selectedTarget.item.nameKey);
     } else if (selectedTarget.type === 'staff') {
       finalPrefix = `[Сотрудник: ${selectedTarget.item.name}] `;
     }
@@ -91,6 +93,7 @@ export default function ReviewModal({ onClose }: Props) {
         user_id: userId || undefined,
         guest_name: userId ? undefined : (name || 'Гость'),
         guest_avatar: userId ? undefined : (photo || undefined),
+        category: categoryName,
       });
       setSent(true);
     } catch (err) {
