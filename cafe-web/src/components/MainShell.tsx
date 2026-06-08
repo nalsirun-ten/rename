@@ -65,12 +65,6 @@ export default function MainShell() {
     return unsub;
   }, []);
 
-  const handleBackToHome = useCallback(() => {
-    useNavigationStore.getState().setActiveTab(0);
-  }, []);
-
-  useHardwareBack(handleBackToHome, storeTab !== 0);
-
   // ─── Prefetch lazy modals in background ───
   useEffect(() => {
     const id = setTimeout(() => {
