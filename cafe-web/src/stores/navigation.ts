@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface NavigationState {
   activeTab: number;
@@ -13,7 +13,8 @@ export const useNavigationStore = create<NavigationState>()(
       setActiveTab: (index: number) => set({ activeTab: index }),
     }),
     {
-      name: 'navigation-storage',
+      name: 'navigation-tab',
+      storage: createJSONStorage(() => sessionStorage),
     }
   )
 );
