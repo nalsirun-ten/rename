@@ -102,13 +102,13 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
             height: 'clamp(34px, 8.7rem, 48px)',
             borderRadius: 12,
             border: item.isFavorite ? '1.5px solid #EF4444' : '1.5px solid transparent',
-            backgroundColor: item.isFavorite ? '#EF4444' : '#FEE2E2',
+            backgroundColor: item.isFavorite ? '#EF4444' : '#EFF6FF',
             transition: 'all 0.2s',
           }}
         >
           <span className="icon-material" style={{
             fontSize: 'clamp(19px, 4.8rem, 26px)',
-            color: item.isFavorite ? '#FFFFFF' : '#EF4444',
+            color: item.isFavorite ? '#FFFFFF' : '#3B82F6',
             fontVariationSettings: item.isFavorite ? "'FILL' 1" : "'FILL' 0",
           }}>
             favorite
