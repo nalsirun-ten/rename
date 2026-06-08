@@ -175,8 +175,8 @@ export default function MenuPage() {
             zIndex: 1,
           }}>
         {/* Menu Tab */}
-        <div style={{ display: activeTab === 'Меню' ? 'block' : 'none' }}>
-          <>
+        {activeTab === 'Меню' && (
+          <div>
             {/* Title & Dot */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '20px 16px 16px 16px' }}>
               <h2 style={{ fontSize: 'clamp(18px, 4.8rem, 24px)', fontWeight: 800, color: '#1E293B', marginRight: 8 }}>
@@ -376,14 +376,15 @@ export default function MenuPage() {
                 </div>
               )}
             </div>
-          </>
-        </div>
+          </div>
+        )}
 
         {/* Business Lunch Tab */}
-        <div 
-          className="flex-center" 
-          style={{ 
-            display: activeTab === 'Бизнес ланч' ? 'flex' : 'none',
+        {activeTab === 'Бизнес ланч' && (
+          <div 
+            className="flex-center" 
+            style={{ 
+              display: 'flex',
             flex: 1, 
             padding: '40px 16px', 
             flexDirection: 'column', 
@@ -392,7 +393,8 @@ export default function MenuPage() {
         >
           <span className="icon-material" style={{ fontSize: 'clamp(48px, 12.3rem, 68px)', marginBottom: 16 }}>restaurant</span>
           <p style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 600 }}>{t('menu_business_lunch_dev')}</p>
-        </div>
+          </div>
+        )}
       </div>
       </PullToRefresh>
       </div>
