@@ -307,7 +307,7 @@ export default function MenuPage() {
                   <div key={i} style={{
                     padding: '12px 0',
                     margin: '0 12px',
-                    borderBottom: '1px solid #CBD5E1',
+                    borderBottom: '1px solid #94A3B8',
                     display: 'flex',
                     alignItems: 'stretch',
                   }}>

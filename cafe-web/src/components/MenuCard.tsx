@@ -14,7 +14,7 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
     <div style={{
       padding: '12px 0',
       margin: '0 12px',
-      borderBottom: '1px solid #CBD5E1',
+      borderBottom: '1px solid #94A3B8',
       display: 'flex',
       alignItems: 'stretch',
     }}>
@@ -64,7 +64,7 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
           <p style={{
             fontSize: 'clamp(12px, 3.1rem, 16px)',
             fontWeight: 400,
-            color: '#64748B',
+            color: '#475569',
             marginBottom: 8,
             lineHeight: 1.35,
             display: '-webkit-box',
