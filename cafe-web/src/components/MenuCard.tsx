@@ -14,7 +14,7 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
     <div style={{
       padding: '12px 0',
       margin: '0 12px',
-      borderBottom: '1px solid #94A3B8',
+      borderBottom: '1px solid #64748B',
       display: 'flex',
       alignItems: 'stretch',
     }}>
@@ -64,7 +64,7 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
           <p style={{
             fontSize: 'clamp(12px, 3.1rem, 16px)',
             fontWeight: 400,
-            color: '#475569',
+            color: '#334155',
             marginBottom: 8,
             lineHeight: 1.35,
             display: '-webkit-box',
@@ -102,13 +102,13 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
             height: 'clamp(34px, 8.7rem, 48px)',
             borderRadius: 12,
             border: item.isFavorite ? '1.5px solid #EF4444' : '1.5px solid transparent',
-            backgroundColor: item.isFavorite ? '#FEF2F2' : '#EFF6FF',
+            backgroundColor: item.isFavorite ? '#FEE2E2' : '#FEF2F2',
             transition: 'all 0.2s',
           }}
         >
           <span className="icon-material" style={{
             fontSize: 'clamp(19px, 4.8rem, 26px)',
-            color: item.isFavorite ? '#EF4444' : '#94A3B8',
+            color: item.isFavorite ? '#EF4444' : '#FCA5A5',
             fontVariationSettings: item.isFavorite ? "'FILL' 1" : "'FILL' 0",
           }}>
             favorite
