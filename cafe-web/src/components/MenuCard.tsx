@@ -14,7 +14,7 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
     <div style={{
       padding: '12px 0',
       margin: '0 12px',
-      borderBottom: '1px solid #64748B',
+      borderBottom: '1px solid #000000',
       display: 'flex',
       alignItems: 'stretch',
     }}>
