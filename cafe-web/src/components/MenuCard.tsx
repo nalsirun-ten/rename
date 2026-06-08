@@ -101,7 +101,7 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
             width: 'clamp(34px, 8.7rem, 48px)',
             height: 'clamp(34px, 8.7rem, 48px)',
             borderRadius: 12,
-            border: item.isFavorite ? '1.5px solid #EF4444' : '1.5px solid transparent',
+            border: item.isFavorite ? '1.5px solid #EF4444' : '1px solid #BFDBFE',
             backgroundColor: item.isFavorite ? '#EF4444' : '#EFF6FF',
             transition: 'all 0.2s',
           }}
