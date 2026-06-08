@@ -168,7 +168,7 @@ export default function MenuPage() {
             onTouchEnd={handleTouchEnd}
             style={{
             flex: 1,
-            backgroundColor: '#FEF9F5',
+            backgroundColor: '#FFFFFF',
             display: 'flex',
             flexDirection: 'column',
             position: 'relative',
