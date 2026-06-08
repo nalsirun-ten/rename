@@ -2,6 +2,15 @@ import { useEffect, useRef, useId } from 'react';
 
 const modalStack: string[] = [];
 let pendingBacks = 0;
+let lastVisibleTime = Date.now();
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      lastVisibleTime = Date.now();
+    }
+  });
+}
 
 window.addEventListener('popstate', (e: PopStateEvent) => {
   if (pendingBacks > 0) {
@@ -50,6 +59,11 @@ export function useHardwareBack(onClose: () => void, isActive: boolean = true) {
 
     const handlePopState = (e: PopStateEvent) => {
       if ((e as any)._ignoredByApp) return;
+      
+      // Ignore phantom popstate events that happen when app wakes up on Android Chrome
+      if (Date.now() - lastVisibleTime < 500) {
+        return;
+      }
 
       // Only the top-most modal should close when hardware back is pressed
       if (modalStack[modalStack.length - 1] === id) {
