@@ -70,8 +70,6 @@ export default function App() {
       setSession(initialSession);
       setLoading(false);
       if (initialSession?.user) {
-        // Always open home page after auth is restored
-        useNavigationStore.getState().setActiveTab(0);
         loadPrivateData(initialSession.user.id);
       }
     });
@@ -80,7 +78,9 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        useNavigationStore.getState().setActiveTab(0);
+        if (_event === 'SIGNED_IN') {
+          useNavigationStore.getState().setActiveTab(0);
+        }
         loadPrivateData(session.user.id);
       }
     });
