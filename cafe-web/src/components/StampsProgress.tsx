@@ -178,8 +178,8 @@ function StampsInfoModal({ onClose }: { onClose: () => void }) {
 
 export default function StampsProgress() {
   const { stamps } = useProfileStore();
-  const filled = Math.min(stamps, TOTAL - 1);
-  const isComplete = filled >= TOTAL - 1;
+  const filled = stamps % TOTAL;
+  const isComplete = filled === TOTAL - 1;
   const [showInfo, setShowInfo] = useState(false);
   const t = useT();
 
