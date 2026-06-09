@@ -178,8 +178,8 @@ function StampsInfoModal({ onClose }: { onClose: () => void }) {
 
 export default function StampsProgress() {
   const { stamps } = useProfileStore();
-  const filled = Math.min(stamps, TOTAL);
-  const isComplete = filled >= TOTAL;
+  const filled = Math.min(stamps, TOTAL - 1);
+  const isComplete = filled >= TOTAL - 1;
   const [showInfo, setShowInfo] = useState(false);
   const t = useT();
 
@@ -232,9 +232,9 @@ export default function StampsProgress() {
                       {Array.from({ length: COLS }, (_, col) => {
                         const idx = row * COLS + col;
                         if (idx >= TOTAL) return <div key={idx} />;
-                        const isFilled = idx < filled || (isComplete && idx === TOTAL - 1);
-                        const isNext = idx === filled && !isComplete;
                         const isGift = idx === TOTAL - 1;
+                        const isFilled = idx < filled && !isGift;
+                        const isNext = (idx === filled && !isComplete && !isGift) || (isGift && isComplete);
                         return (
                           <StampItem
                             key={idx}
