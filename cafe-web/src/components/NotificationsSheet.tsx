@@ -101,7 +101,7 @@ export default function NotificationsSheet({ onClose }: Props) {
         </div>
 
         {/* ── Scrollable content ── */}
-        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '16px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }} onScroll={handleScroll}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }} onScroll={handleScroll}>
           {notifications.length === 0 ? (
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',

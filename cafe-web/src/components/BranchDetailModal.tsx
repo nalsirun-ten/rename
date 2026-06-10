@@ -88,7 +88,7 @@ export default function BranchDetailModal() {
         backgroundColor: '#FFF',
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: '94vh',
+        maxHeight: '85vh',
         overflow: 'hidden',
         position: 'relative',
         width: '100%',
@@ -162,7 +162,7 @@ export default function BranchDetailModal() {
 
         {/* Scrollable Details Section */}
         <div style={{
-          flexShrink: 0, overflowY: 'auto', maxHeight: 'calc(94vh - 42vh)',
+          height: 'calc(85vh - 42vh)', overflowY: 'auto',
           backgroundColor: '#FFF',
           padding: '24px 16px',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)'

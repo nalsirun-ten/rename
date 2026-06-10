@@ -52,12 +52,10 @@ export default function TierModal({ onClose }: Props) {
     <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
       <div
         ref={sheetRef}
-        className="rs-sheet flex-col"
+        className="rs-sheet sheet-base flex-col"
         style={{
-          width: '100%', maxWidth: 430,
-          borderTopLeftRadius: 32, borderTopRightRadius: 32,
+          maxHeight: '85vh',
           overflow: 'hidden',
-          height: '80vh',
           backgroundColor: '#FCFBFA',
         }}
       >

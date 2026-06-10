@@ -57,9 +57,8 @@ export default function AboutCafeModal({ onClose }: Props) {
         ref={sheetRef}
         className="rs-sheet sheet-base flex-col"
         style={{
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
+          maxHeight: '85vh',
+          overflow: 'hidden',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 8px', flexShrink: 0 }}>

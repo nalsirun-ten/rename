@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useMenuStore } from '../stores/menu';
+import { useNavigationStore } from '../stores/navigation';
 import MenuCard from '../components/MenuCard';
 import PullToRefresh from '../components/PullToRefresh';
 import { useT } from '../i18n/useT';
@@ -13,6 +14,8 @@ export default function MenuPage() {
   const isLoading = useMenuStore(s => s.isLoading);
   const isLoadingMore = useMenuStore(s => s.isLoadingMore);
   const hasMore = useMenuStore(s => s.hasMore);
+  const isPageActive = useNavigationStore(s => s.activeTab) === 2; // menu tab
+  const isVirtualizerActive = isPageActive && activeTab === 'Меню'; // only when menu sub-tab is visible
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -90,11 +93,13 @@ export default function MenuPage() {
   const VISIBLE_COUNT = page * 8;
   const visibleItems = filteredItems.slice(0, VISIBLE_COUNT);
 
+  // Only run virtualizer when menu sub-tab is visible.
+  // When hidden (Business Lunch or another page) — no observers, no CPU.
   const virtualizer = useVirtualizer({
-    count: visibleItems.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 140, // Approximate height of MenuCard including margins
-    overscan: 5,
+    count: isVirtualizerActive ? visibleItems.length : 0,
+    getScrollElement: () => isVirtualizerActive ? scrollContainerRef.current : null,
+    estimateSize: () => 140,
+    overscan: isVirtualizerActive ? 5 : 0,
   });
 
   return (
@@ -175,8 +180,7 @@ export default function MenuPage() {
             zIndex: 1,
           }}>
         {/* Menu Tab */}
-        {activeTab === 'Меню' && (
-          <div>
+          <div style={{ display: activeTab === 'Меню' ? 'block' : 'none' }}>
             {/* Title & Dot */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '20px 16px 16px 16px' }}>
               <h2 style={{ fontSize: 'clamp(18px, 4.8rem, 24px)', fontWeight: 800, color: '#1E293B', marginRight: 8 }}>
@@ -377,24 +381,21 @@ export default function MenuPage() {
               )}
             </div>
           </div>
-        )}
 
         {/* Business Lunch Tab */}
-        {activeTab === 'Бизнес ланч' && (
-          <div 
-            className="flex-center" 
-            style={{ 
-              display: 'flex',
-            flex: 1, 
-            padding: '40px 16px', 
-            flexDirection: 'column', 
-            color: '#94A3B8' 
+          <div
+            className="flex-center"
+            style={{
+              display: activeTab === 'Бизнес ланч' ? 'flex' : 'none',
+            flex: 1,
+            padding: '40px 16px',
+            flexDirection: 'column',
+            color: '#94A3B8'
           }}
         >
           <span className="icon-material" style={{ fontSize: 'clamp(48px, 12.3rem, 68px)', marginBottom: 16 }}>restaurant</span>
           <p style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 600 }}>{t('menu_business_lunch_dev')}</p>
           </div>
-        )}
       </div>
       </PullToRefresh>
       </div>

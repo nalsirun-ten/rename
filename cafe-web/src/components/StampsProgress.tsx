@@ -70,16 +70,19 @@ function StampItem({
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 1 auto', padding: '0 2px', width: `${100 / COLS}%`, maxWidth: 72 }}>
         <div style={{ width: '100%', aspectRatio: '1', position: 'relative' }}>
           {!isGift && (
-            <svg
-              viewBox="0 0 100 100"
+            <div
               style={{
-                position: 'absolute', inset: -5, width: 'calc(100% + 10px)', height: 'calc(100% + 10px)',
-                animation: 'spin-dashed 6s linear infinite', zIndex: 1, pointerEvents: 'none',
-                willChange: 'transform', transformOrigin: '50% 50%',
+                position: 'absolute', inset: -5, zIndex: 1, pointerEvents: 'none',
+                animation: 'spin-dashed 6s linear infinite',
               }}
             >
-              <circle cx="50" cy="50" r="48" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeDasharray="10 15.1327" strokeLinecap="round" />
-            </svg>
+              <svg
+                viewBox="0 0 100 100"
+                style={{ width: '100%', height: '100%', display: 'block' }}
+              >
+                <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="3" strokeDasharray="10 15.1327" strokeLinecap="round" />
+              </svg>
+            </div>
           )}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 2,

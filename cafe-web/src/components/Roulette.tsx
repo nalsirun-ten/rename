@@ -211,15 +211,30 @@ export default function Roulette() {
 
   const alreadySpun = hasSpunToday();
 
+  // Wheel logical size — rendered output scales via CSS transform
   const SIZE = 370;
   const CX = SIZE / 2;
   const CY = SIZE / 2;
-  
+
   const R_border_outer = 162;
   const R_border_inner = 150;
   const R_border_center = (R_border_outer + R_border_inner) / 2;
   const R = 150;
   const R_text = 112;
+
+  // ─── Responsive scale — wheel scales to fit screen width ────────────
+  const getWheelScale = () => {
+    const maxW = Math.min(window.innerWidth, 430);
+    const available = maxW - 24; // 12px padding each side
+    return Math.min(1, available / SIZE);
+  };
+  const [wheelScale, setWheelScale] = useState(getWheelScale);
+
+  useEffect(() => {
+    const handle = () => setWheelScale(getWheelScale());
+    window.addEventListener('resize', handle);
+    return () => window.removeEventListener('resize', handle);
+  }, []);
 
   // ─── Build equal SVG segments ──────────────────────────────────────
   const segments = useMemo(() => PRIZES.map((item, i) => {
@@ -322,11 +337,19 @@ export default function Roulette() {
       <div
         style={{
           position: 'relative',
-          width: SIZE + 40,
-          height: SIZE + 40,
+          width: (SIZE + 40) * wheelScale,
+          height: (SIZE + 40) * wheelScale,
           marginBottom: 0,
         }}
       >
+        <div style={{
+          transform: `scale(${wheelScale})`,
+          transformOrigin: 'top left',
+          position: 'absolute',
+          top: 0, left: 0,
+          width: SIZE + 40,
+          height: SIZE + 40,
+        }}>
         {/* Static Dark Blue Backing Circle */}
         <svg
           width={SIZE + 40}
@@ -497,6 +520,7 @@ export default function Roulette() {
             </>
           )}
         </button>
+      </div>
       </div>
 
       {/* Prizes Modal */}

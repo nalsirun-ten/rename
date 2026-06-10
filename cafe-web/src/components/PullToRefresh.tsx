@@ -176,7 +176,7 @@ const PullToRefresh = forwardRef<HTMLDivElement, PullToRefreshProps>(({ onRefres
         width: '100%',
         position: 'relative',
         overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'none',
       }}
     >
       {/* Pull indicator — absolutely positioned, animated via direct DOM writes */}

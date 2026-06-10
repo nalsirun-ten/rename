@@ -20,6 +20,26 @@ const BranchesPage = lazy(() => import('../pages/BranchesPage'));
 const MenuPage = lazy(() => import('../pages/MenuPage'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage'));
 
+// Keep modal images in DOM so iOS Safari doesn't evict decoded bitmaps
+// when modals mount/unmount via createPortal.
+const STATIC_IMAGES = [
+  '/categories/1.png',
+  '/categories/2.png',
+  '/categories/3.png',
+  '/categories/4.png',
+  '/categories/5.png',
+];
+
+function ImagePreloader() {
+  return (
+    <div aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
+      {STATIC_IMAGES.map((src) => (
+        <img key={src} src={src} alt="" decoding="async" />
+      ))}
+    </div>
+  );
+}
+
 function LazyFallback() {
   return (
     <div style={{
@@ -97,10 +117,9 @@ export default function MainShell() {
                   zIndex: isActive ? 1 : 0,
                   opacity: isActive ? 1 : 0,
                   pointerEvents: isActive ? 'auto' : 'none',
-                  // content-visibility: hidden tells the browser to skip
-                  // layout & paint for hidden tabs, saving CPU/GPU.
-                  // The DOM stays in memory → instant switch, no blink.
-                  contentVisibility: isActive ? 'visible' : 'hidden',
+                  // visibility: hidden keeps the DOM and CSS animations
+                  // alive — contentVisibility: hidden kills animations on iOS.
+                  visibility: isActive ? 'visible' : 'hidden',
                 }}
               >
                 <ErrorBoundary>
@@ -134,6 +153,9 @@ export default function MainShell() {
         {!isOnboarded && !isLoading && <Suspense fallback={null}><OnboardingModal /></Suspense>}
         <InstallPwaBanner activeTab={displayTab} />
         <Suspense fallback={null}><PushPromptModal /></Suspense>
+
+        {/* Keep static modal images in DOM so iOS Safari doesn't evict decoded bitmaps */}
+        <ImagePreloader />
       </div>
     </div>
   );

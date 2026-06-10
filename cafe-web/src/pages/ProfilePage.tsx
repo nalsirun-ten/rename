@@ -110,7 +110,7 @@ export default function ProfilePage() {
       height: '100%',
       backgroundColor: '#1B5E3D',
       overflowY: 'auto',
-      WebkitOverflowScrolling: 'touch',
+      overscrollBehavior: 'none',
     }}>
       {/* ─── Header ─── */}
       <div style={{

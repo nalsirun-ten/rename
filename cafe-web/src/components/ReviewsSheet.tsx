@@ -358,10 +358,9 @@ export default function ReviewsSheet({ onClose }: Props) {
     >
       <div
         ref={sheetRef}
-        className="rs-sheet flex-col"
+        className="rs-sheet sheet-base flex-col"
         style={{
-          width: '100%', maxWidth: 430,
-          height: '88vh',
+          maxHeight: '85vh',
           backgroundColor: '#F8F9FB',
           borderTopLeftRadius: 28, borderTopRightRadius: 28,
           overflow: 'hidden',
@@ -393,7 +392,7 @@ export default function ReviewsSheet({ onClose }: Props) {
         </div>
 
         {/* ── Scrollable content ── */}
-        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }} onScroll={handleScroll}>
+        <div style={{ flex: 1, overflowY: 'auto' }} onScroll={handleScroll}>
           {/* Stats */}
           <StatsCard stats={stats} />
 

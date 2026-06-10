@@ -103,7 +103,8 @@ export default function QuickActions() {
       </div>
 
       {/* ── Modals ── */}
-      {showReview && <ReviewModal onClose={() => setShowReview(false)} />}
+      {/* ReviewModal always mounted to prevent iOS Safari evicting decoded image bitmaps */}
+      <ReviewModal onClose={() => setShowReview(false)} isOpen={showReview} />
       {showInstagram && <InstagramModal onClose={() => setShowInstagram(false)} />}
       {showWhatsApp && <WhatsAppModal onClose={() => setShowWhatsApp(false)} />}
     </>

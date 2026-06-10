@@ -18,7 +18,6 @@ const scrollStyle: React.CSSProperties = {
   paddingRight: 16,
   scrollbarWidth: 'none',       // Firefox
   msOverflowStyle: 'none',      // IE
-  WebkitOverflowScrolling: 'touch',
   overscrollBehaviorX: 'contain',
 };
 
