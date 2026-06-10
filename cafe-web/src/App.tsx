@@ -78,9 +78,6 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        if (_event === 'SIGNED_IN') {
-          useNavigationStore.getState().setActiveTab(0);
-        }
         loadPrivateData(session.user.id);
       }
     });
