@@ -2,13 +2,26 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useMenuStore } from '../stores/menu';
 import { useNavigationStore } from '../stores/navigation';
 import MenuCard from '../components/MenuCard';
+import CategoryCard from '../components/CategoryCard';
 import PullToRefresh from '../components/PullToRefresh';
 import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n/translations';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
+const CATEGORIES_DATA = [
+  { name: 'Chicken', image: '/category_images/chicken.png', count: 12 },
+  { name: 'Sushi', image: '/category_images/sushi.png', count: 8 },
+  { name: 'Pizza', image: '/category_images/pizza.png', count: 5 },
+  { name: 'Kimbap', image: '/category_images/kimbap.png', count: 4 },
+  { name: 'Soups', image: '/category_images/soups.png', count: 6 },
+  { name: 'Main dishes', image: '/category_images/main_dishes.png', count: 10 },
+  { name: 'Drinks', image: '/category_images/drinks.png', count: 15 },
+  { name: 'Side dishes', image: '/category_images/side_dishes.png', count: 7 },
+  { name: 'Noodles', image: '/category_images/noodles.png', count: 9 },
+];
+
 export default function MenuPage() {
-  const { items, categories, searchQuery, activeTab, sortBy, setSearchQuery, setActiveTab, setSortBy, fetchMoreMenuItems, page } = useMenuStore();
+  const { items, categories, searchQuery, activeTab, sortBy, setSearchQuery, setActiveTab, setSortBy, fetchMoreMenuItems, page, categoryFilter, setCategoryFilter } = useMenuStore();
   const sortOptions = useMemo(() => ['', ...categories], [categories]);
   const t = useT();
   const isLoading = useMenuStore(s => s.isLoading);
@@ -113,55 +126,57 @@ export default function MenuPage() {
       }}>
       {/* ─── Header ─── */}
       <div style={{
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)',
-        paddingBottom: '16px',
+        paddingTop: categoryFilter ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : 'calc(env(safe-area-inset-top, 0px) + 24px)',
+        paddingBottom: categoryFilter ? '8px' : '16px',
         position: 'sticky',
         top: 0,
         zIndex: 10,
         backgroundColor: '#1B5E3D',
       }}>
         {/* Title */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: categoryFilter ? 12 : 24 }}>
           <span style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 700, color: '#FFF' }}>
             {t('menu_title')}
           </span>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', margin: '0 12px', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
-          <button
-            className="btn-reset"
-            onClick={() => setActiveTab('Меню')}
-            style={{
-              flex: 1,
-              paddingBottom: 10,
-              borderBottom: activeTab === 'Меню' ? '3px solid #FFF' : '3px solid transparent',
-              color: activeTab === 'Меню' ? '#FFF' : 'rgba(255,255,255,0.7)',
-              fontSize: 'clamp(15px, 3.8rem, 21px)',
-              fontWeight: 700,
-              textAlign: 'center',
-              transition: 'all 0.2s',
-            }}
-          >
-            {t('nav_menu')}
-          </button>
-          <button
-            className="btn-reset"
-            onClick={() => setActiveTab('Бизнес ланч')}
-            style={{
-              flex: 1,
-              paddingBottom: 10,
-              borderBottom: activeTab === 'Бизнес ланч' ? '3px solid #FFF' : '3px solid transparent',
-              color: activeTab === 'Бизнес ланч' ? '#FFF' : 'rgba(255,255,255,0.7)',
-              fontSize: 'clamp(15px, 3.8rem, 21px)',
-              fontWeight: 700,
-              textAlign: 'center',
-              transition: 'all 0.2s',
-            }}
-          >
-            {t('menu_tab_business_lunch')}
-          </button>
-        </div>
+        {!categoryFilter && (
+          <div style={{ display: 'flex', margin: '0 12px', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
+            <button
+              className="btn-reset"
+              onClick={() => setActiveTab('Меню')}
+              style={{
+                flex: 1,
+                paddingBottom: 10,
+                borderBottom: activeTab === 'Меню' ? '3px solid #FFF' : '3px solid transparent',
+                color: activeTab === 'Меню' ? '#FFF' : 'rgba(255,255,255,0.7)',
+                fontSize: 'clamp(15px, 3.8rem, 21px)',
+                fontWeight: 700,
+                textAlign: 'center',
+                transition: 'all 0.2s',
+              }}
+            >
+              {t('nav_menu')}
+            </button>
+            <button
+              className="btn-reset"
+              onClick={() => setActiveTab('Бизнес ланч')}
+              style={{
+                flex: 1,
+                paddingBottom: 10,
+                borderBottom: activeTab === 'Бизнес ланч' ? '3px solid #FFF' : '3px solid transparent',
+                color: activeTab === 'Бизнес ланч' ? '#FFF' : 'rgba(255,255,255,0.7)',
+                fontSize: 'clamp(15px, 3.8rem, 21px)',
+                fontWeight: 700,
+                textAlign: 'center',
+                transition: 'all 0.2s',
+              }}
+            >
+              {t('menu_tab_business_lunch')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ─── Body ─── */}
@@ -181,127 +196,153 @@ export default function MenuPage() {
           }}>
         {/* Menu Tab */}
           <div style={{ display: activeTab === 'Меню' ? 'block' : 'none' }}>
-            {/* Title & Dot */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '20px 16px 16px 16px' }}>
-              <h2 style={{ fontSize: 'clamp(18px, 4.8rem, 24px)', fontWeight: 800, color: '#1E293B', marginRight: 8 }}>
-                {t('menu_our_menu')}
-              </h2>
-              <div style={{ 
-                width: 8, 
-                height: 8, 
-                borderRadius: '50%', 
-                backgroundColor: '#22C55E',
-                boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)'
-              }} />
-            </div>
+            {!categoryFilter ? (
+              <>
+                {/* Title & Dot */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '20px 16px 16px 16px' }}>
+                  <h2 style={{ fontSize: 'clamp(18px, 4.8rem, 24px)', fontWeight: 800, color: '#1E293B', marginRight: 8 }}>
+                    {t('menu_our_menu')}
+                  </h2>
+                  <div style={{ 
+                    width: 8, 
+                    height: 8, 
+                    borderRadius: '50%', 
+                    backgroundColor: '#22C55E',
+                    boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)'
+                  }} />
+                </div>
+                
+                {/* Categories List */}
+                <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column' }}>
+                  {CATEGORIES_DATA.map(cat => (
+                    <CategoryCard 
+                      key={cat.name}
+                      name={cat.name}
+                      count={cat.count}
+                      imageUrl={cat.image}
+                      onClick={() => setCategoryFilter(cat.name)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 8px 16px' }}>
+                  <button className="btn-reset flex-center" onClick={() => setCategoryFilter('')} style={{ marginRight: 12, width: 40, height: 40, backgroundColor: '#F1F5F9', borderRadius: '50%' }}>
+                    <span className="icon-material" style={{ fontSize: 28, color: '#1E293B' }}>arrow_back</span>
+                  </button>
+                  <h2 style={{ fontSize: 'clamp(20px, 5.1rem, 26px)', fontWeight: 800, color: '#1E293B' }}>
+                    {categoryFilter}
+                  </h2>
+                </div>
 
-            {/* Search Bar & Filter Button */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px', marginBottom: 16 }}>
-              <div style={{
-                flex: 1,
-                minWidth: 0,
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: '#FFFFFF',
-                borderRadius: 24,
-                padding: '0 16px',
-                height: 48,
-                border: '1.5px solid #94A3B8',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-                marginRight: 12,
-              }}>
-                <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', color: '#000000', marginRight: 10 }}>
-                  search
-                </span>
-                <input
-                  className="black-placeholder"
-                  type="text"
-                  placeholder={t('menu_search_placeholder')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
+                {/* Search Bar & Filter Button */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px', marginBottom: 24 }}>
+                  <div style={{
                     flex: 1,
                     minWidth: 0,
-                    border: 'none',
-                    outline: 'none',
-                    backgroundColor: 'transparent',
-                    fontSize: 'clamp(16px, 4rem, 22px)',
-                    fontWeight: 500,
-                    color: '#000000',
-                  }}
-                />
-              </div>
-              <div style={{ position: 'relative' }} ref={sortRef}>
-                <button
-                  className="btn-reset flex-center"
-                  onClick={() => setIsSortOpen(!isSortOpen)}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '50%',
-                    backgroundColor: '#1E293B',
-                    flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(30,41,59,0.2)',
-                  }}
-                >
-                  <span className="icon-material" style={{ fontSize: 'clamp(24px, 6.1rem, 34px)', color: '#FFF' }}>
-                    tune
-                  </span>
-                </button>
-
-                {isSortOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 56,
-                    right: 0,
-                    width: 280,
-                    backgroundColor: '#FFF',
-                    borderRadius: 16,
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                    zIndex: 100,
-                    overflow: 'hidden',
                     display: 'flex',
-                    flexDirection: 'column'
+                    alignItems: 'center',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 24,
+                    padding: '0 16px',
+                    height: 48,
+                    border: '1.5px solid #94A3B8',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+                    marginRight: 12,
                   }}>
-                    <div style={{ padding: '16px 16px 8px 16px', fontSize: 13, fontWeight: 700, color: '#94A3B8' }}>
-                      {t('menu_sort_label')}
-                    </div>
-                    {sortOptions.map((option, index) => {
-                      const label = option === '' ? t('menu_sort_none') : option;
-
-                      return (
-                        <button
-                          key={option}
-                          className="btn-reset"
-                          onClick={() => {
-                            setSortBy(option);
-                            setIsSortOpen(false);
-                          }}
-                          style={{
-                            width: '100%',
-                            textAlign: 'left',
-                            padding: '16px 16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            borderBottom: index !== sortOptions.length - 1 ? '1px solid #F1F5F9' : 'none',
-                            color: '#1E293B',
-                            fontSize: 'clamp(15px, 3.8rem, 21px)',
-                            fontWeight: sortBy === option ? 700 : 500,
-                            backgroundColor: sortBy === option ? '#F8FAFC' : 'transparent',
-                          }}
-                        >
-                          {label}
-                          {sortBy === option && (
-                            <span className="icon-material" style={{ color: '#10B981', fontSize: 'clamp(20px, 5.1rem, 28px)' }}>check</span>
-                          )}
-                        </button>
-                      );
-                    })}
+                    <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', color: '#000000', marginRight: 10 }}>
+                      search
+                    </span>
+                    <input
+                      className="black-placeholder"
+                      type="text"
+                      placeholder={t('menu_search_placeholder')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        border: 'none',
+                        outline: 'none',
+                        backgroundColor: 'transparent',
+                        fontSize: 'clamp(16px, 4rem, 22px)',
+                        fontWeight: 500,
+                        color: '#000000',
+                      }}
+                    />
                   </div>
-                )}
-              </div>
-            </div>
+                  <div style={{ position: 'relative' }} ref={sortRef}>
+                    <button
+                      className="btn-reset flex-center"
+                      onClick={() => setIsSortOpen(!isSortOpen)}
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: '50%',
+                        backgroundColor: '#1E293B',
+                        flexShrink: 0,
+                        boxShadow: '0 4px 12px rgba(30,41,59,0.2)',
+                      }}
+                    >
+                      <span className="icon-material" style={{ fontSize: 'clamp(24px, 6.1rem, 34px)', color: '#FFF' }}>
+                        tune
+                      </span>
+                    </button>
+
+                    {isSortOpen && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 56,
+                        right: 0,
+                        width: 280,
+                        backgroundColor: '#FFF',
+                        borderRadius: 16,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                        zIndex: 100,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}>
+                        <div style={{ padding: '16px 16px 8px 16px', fontSize: 13, fontWeight: 700, color: '#94A3B8' }}>
+                          {t('menu_sort_label')}
+                        </div>
+                        {sortOptions.map((option, index) => {
+                          const label = option === '' ? t('menu_sort_none') : option;
+
+                          return (
+                            <button
+                              key={option}
+                              className="btn-reset"
+                              onClick={() => {
+                                setSortBy(option);
+                                setIsSortOpen(false);
+                              }}
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '16px 16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                borderBottom: index !== sortOptions.length - 1 ? '1px solid #F1F5F9' : 'none',
+                                color: '#1E293B',
+                                fontSize: 'clamp(15px, 3.8rem, 21px)',
+                                fontWeight: sortBy === option ? 700 : 500,
+                                backgroundColor: sortBy === option ? '#F8FAFC' : 'transparent',
+                              }}
+                            >
+                              {label}
+                              {sortBy === option && (
+                                <span className="icon-material" style={{ color: '#10B981', fontSize: 'clamp(20px, 5.1rem, 28px)' }}>check</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
             {/* List */}
             <div style={{ paddingBottom: 100 }}>
@@ -380,6 +421,8 @@ export default function MenuPage() {
                 </div>
               )}
             </div>
+              </>
+            )}
           </div>
 
         {/* Business Lunch Tab */}
