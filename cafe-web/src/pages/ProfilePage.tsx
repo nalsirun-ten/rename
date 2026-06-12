@@ -371,7 +371,6 @@ export default function ProfilePage() {
           <ConfirmLogoutModal
             onClose={() => setIsLogoutConfirmOpen(false)}
             onConfirm={async () => {
-              setIsLogoutConfirmOpen(false);
               await useProfileStore.getState().signOut();
               clearAuthData();
             }}

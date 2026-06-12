@@ -117,6 +117,15 @@ export const useOrderStore = create<OrdersState>()((set, get) => ({
         return null;
       }
 
+      // Notify Telegram group about the new order
+      try {
+        await supabase.functions.invoke('notify-order', {
+          body: { order_id: data.id }
+        });
+      } catch (notifyErr) {
+        console.error('Failed to notify order:', notifyErr);
+      }
+
       set({ isSubmitting: false });
       return data as Order;
     } catch (err: any) {

@@ -12,6 +12,8 @@ import { useOverlayClose } from '../hooks/useOverlayClose';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useHardwareBack } from '../hooks/useHardwareBack';
 import { thumbnailUrl } from '../utils/imageUrl';
+import CountrySelectModal from './CountrySelectModal';
+import type { Country } from './CountrySelectModal';
 import type { DeliveryMethod } from '../stores/orders';
 
 interface Props {
@@ -41,7 +43,35 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
   const [entrance, setEntrance] = useState('');
   const [floor, setFloor] = useState('');
   const [apartment, setApartment] = useState('');
-  const [phone, setPhone] = useState(profilePhone || '');
+
+  const [selectedCountry, setSelectedCountry] = useState<Country>({ code: '+996', flag: '🇰🇬', name: '', format: 'XXX XXX XXX' });
+  const [isCountryModalOpen, setIsCountryModalOpen] = useState(false);
+
+  const getInitialPhone = () => {
+    if (!profilePhone) return '';
+    let cleanPhone = profilePhone;
+    if (cleanPhone.startsWith('+')) {
+      if (cleanPhone.startsWith('+996')) cleanPhone = cleanPhone.slice(4);
+    } else if (cleanPhone.startsWith('996')) {
+      cleanPhone = cleanPhone.slice(3);
+    }
+    const digits = cleanPhone.replace(/\D/g, '');
+    let formatted = '';
+    let digitIndex = 0;
+    const format = 'XXX XXX XXX';
+    for (let i = 0; i < format.length; i++) {
+      if (digitIndex >= digits.length) break;
+      if (format[i] === 'X') {
+        formatted += digits[digitIndex];
+        digitIndex++;
+      } else {
+        formatted += format[i];
+      }
+    }
+    return formatted;
+  };
+
+  const [phone, setPhone] = useState(getInitialPhone());
   const [notes, setNotes] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
@@ -93,6 +123,23 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
     setEntrance('');
     setFloor('');
     setApartment('');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '');
+    const format = selectedCountry.format || 'XXX XXX XXX';
+    let formatted = '';
+    let digitIndex = 0;
+    for (let i = 0; i < format.length; i++) {
+      if (digitIndex >= digits.length) break;
+      if (format[i] === 'X') {
+        formatted += digits[digitIndex];
+        digitIndex++;
+      } else {
+        formatted += format[i];
+      }
+    }
+    setPhone(formatted);
   };
 
   // Build full address string
@@ -159,13 +206,13 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
         return;
       }
     }
-    if (!phone.trim()) {
+    if (!phone.replace(/\D/g, '')) {
       setOrderError(t('err_phone_number'));
       return;
     }
 
     const fullAddress = deliveryMethod === 'delivery' ? buildFullAddress() : undefined;
-    const nameToSend = deliveryMethod === 'delivery' ? recipientName.trim() : undefined;
+    const nameToSend = recipientName.trim() || (profileName !== t('guest') ? profileName : undefined);
 
     const order = await createOrder({
       branch_id: selectedBranchId,
@@ -174,7 +221,7 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
       delivery_method: deliveryMethod,
       delivery_address: fullAddress,
       recipient_name: nameToSend,
-      phone: phone.trim(),
+      phone: `${selectedCountry.code}${phone.replace(/\D/g, '')}`,
       notes: notes.trim() || undefined,
     });
 
@@ -510,17 +557,48 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
             <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               {t('order_phone')}
             </div>
-            <input
-              type="tel"
-              placeholder="+996 ___ ______"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              style={{
-                width: '100%', padding: '12px 16px', borderRadius: 12,
-                border: '1.5px solid #E2E8F0', fontSize: 14, fontWeight: 500,
-                color: '#1E293B', outline: 'none', boxSizing: 'border-box',
-              }}
-            />
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                className="btn-reset"
+                onClick={() => setIsCountryModalOpen(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 16px',
+                  borderRadius: 12,
+                  border: '1.5px solid #E2E8F0',
+                  backgroundColor: '#FFFFFF',
+                  height: 48,
+                  boxSizing: 'border-box'
+                }}
+              >
+                <span style={{ fontSize: 24, marginRight: 8 }}>{selectedCountry.flag}</span>
+                <span style={{ color: '#1E293B', marginRight: 4, fontSize: 14, fontWeight: 500 }}>{selectedCountry.code}</span>
+                <span className="icon-material" style={{ fontSize: 20, color: '#94A3B8' }}>
+                  expand_more
+                </span>
+              </button>
+              <input
+                type="tel"
+                value={phone}
+                onChange={handlePhoneChange}
+                placeholder={selectedCountry.format ? selectedCountry.format.replace(/X/g, '0') : '000 000 000'}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  border: '1.5px solid #E2E8F0',
+                  backgroundColor: '#FFFFFF',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#1E293B',
+                  outline: 'none',
+                  height: 48,
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
           </div>
 
           {/* ─── Notes ─── */}
@@ -567,7 +645,10 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
               ))}
             </div>
           </div>
+        </div>
 
+        {/* ─── Footer ─── */}
+        <div style={{ padding: '16px 20px 0 20px', borderTop: '1px solid #F1F5F9' }}>
           {/* ─── Error ─── */}
           {orderError && (
             <div style={{
@@ -577,10 +658,7 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
               {orderError}
             </div>
           )}
-        </div>
 
-        {/* ─── Footer ─── */}
-        <div style={{ padding: '16px 20px 0 20px', borderTop: '1px solid #F1F5F9' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <span style={{ fontSize: 15, fontWeight: 500, color: '#64748B' }}>{t('cart_total')}</span>
             <span style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', fontWeight: 700, color: '#1E293B' }}>

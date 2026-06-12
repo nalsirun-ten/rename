@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
@@ -6,11 +7,12 @@ import { useT } from '../i18n/useT';
 
 interface Props {
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
 }
 
 export default function ConfirmLogoutModal({ onClose, onConfirm }: Props) {
   const t = useT();
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const sheetRef = useSwipeToClose(onClose);
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);
@@ -42,6 +44,7 @@ export default function ConfirmLogoutModal({ onClose, onConfirm }: Props) {
           <button 
             className="btn-reset flex-center"
             onClick={onClose}
+            disabled={isSigningOut}
             style={{
               flex: 1,
               padding: '14px',
@@ -50,13 +53,25 @@ export default function ConfirmLogoutModal({ onClose, onConfirm }: Props) {
               color: '#475569',
               fontSize: 'clamp(16px, 4rem, 22px)',
               fontWeight: 600,
+              opacity: isSigningOut ? 0.6 : 1,
+              cursor: isSigningOut ? 'default' : 'pointer',
             }}
           >
             {t('cancel')}
           </button>
           <button 
             className="btn-reset flex-center"
-            onClick={onConfirm}
+            onClick={async () => {
+              if (isSigningOut) return;
+              setIsSigningOut(true);
+              try {
+                await onConfirm();
+              } catch (err) {
+                console.error(err);
+                setIsSigningOut(false);
+              }
+            }}
+            disabled={isSigningOut}
             style={{
               flex: 1,
               padding: '14px',
@@ -65,10 +80,24 @@ export default function ConfirmLogoutModal({ onClose, onConfirm }: Props) {
               color: '#FFFFFF',
               fontSize: 'clamp(16px, 4rem, 22px)',
               fontWeight: 600,
-              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+              boxShadow: isSigningOut ? 'none' : '0 4px 12px rgba(239, 68, 68, 0.3)',
+              opacity: isSigningOut ? 0.8 : 1,
+              cursor: isSigningOut ? 'default' : 'pointer',
+              display: 'flex',
+              gap: 8,
             }}
           >
-            {t('logout_btn')}
+            {isSigningOut && (
+              <div style={{ 
+                width: 'clamp(14px, 3.6rem, 20px)', 
+                height: 'clamp(14px, 3.6rem, 20px)', 
+                borderRadius: '50%', 
+                border: '2px solid rgba(255,255,255,0.3)', 
+                borderTopColor: '#FFF', 
+                animation: 'rm-spin .6s linear infinite' 
+              }} />
+            )}
+            {isSigningOut ? t('loading') : t('logout_btn')}
           </button>
         </div>
       </div>

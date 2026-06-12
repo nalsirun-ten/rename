@@ -38,6 +38,19 @@ serve(async (req) => {
       return new Response("ok");
     }
 
+    if (update.message?.text === "/chatid") {
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: update.message.chat.id,
+          message_thread_id: update.message.message_thread_id,
+          text: `Ваш Chat ID: ${update.message.chat.id}\nВаш Topic ID (Thread ID): ${update.message.message_thread_id || 'Нет (это General или обычный чат)'}`
+        })
+      });
+      return new Response("ok");
+    }
+
     if (update.message?.contact) {
       const contact = update.message.contact;
       const telegramUserId = update.message.from.id;

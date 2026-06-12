@@ -1,9 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import CountrySelectModal from '../components/CountrySelectModal';
 import type { Country } from '../components/CountrySelectModal';
 import { useT } from '../i18n/useT';
 import QrCode from '../components/QrCode';
+
+const TELEGRAM_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
@@ -16,6 +19,29 @@ export default function LoginPage() {
   const [isCountryModalOpen, setIsCountryModalOpen] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const t = useT();
+
+  // ─── Telegram auth: single owner of all teardown ───
+  // Holds the live channel + poll timer + session id for the current attempt.
+  // Both the realtime subscription and the poll fallback funnel through
+  // completeTelegram(), which tears EVERYTHING down exactly once — fixing the
+  // leak where a successful realtime login left the 2s poll running forever
+  // (the persistent browser loading bar) and the dangling DB row.
+  const tgRef = useRef<{ channel: RealtimeChannel; timer: ReturnType<typeof setInterval>; sessionId: string } | null>(null);
+
+  const teardownTelegram = useCallback((deleteRow: boolean) => {
+    const tg = tgRef.current;
+    if (!tg) return;
+    tgRef.current = null;
+    clearInterval(tg.timer);
+    tg.channel.unsubscribe();
+    if (deleteRow) {
+      // Don't leave abandoned rows behind (cancel / timeout / sign-in done)
+      supabase.from('telegram_auth_requests').delete().eq('id', tg.sessionId).then(() => {});
+    }
+  }, []);
+
+  // Safety net: tear down if the user leaves the login screen mid-attempt
+  useEffect(() => () => teardownTelegram(false), [teardownTelegram]);
 
   useEffect(() => {
     if (token.length === 6 && otpSent && !loading && !error) {
@@ -89,75 +115,67 @@ export default function LoginPage() {
     setPhone(formatted);
   };
 
+  // Runs once when the bot reports a verified request — guarded so the
+  // realtime event and the poll fallback can't both sign in.
+  const completeTelegram = async (data: { phone?: string; temp_password?: string; status?: string }) => {
+    if (!tgRef.current) return; // already handled / torn down
+    if (data.status !== 'verified' || !data.phone || !data.temp_password) return;
+
+    teardownTelegram(true); // stop polling + realtime, delete the row — BEFORE the await
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      phone: data.phone,
+      password: data.temp_password,
+    });
+    if (authError) setError(authError.message);
+    setTelegramSessionId(null);
+    setLoading(false);
+    // On success the auth listener swaps to the app; this component unmounts.
+  };
+
   const handleTelegramLogin = async () => {
     setLoading(true);
     setError(null);
     try {
       const sessionId = crypto.randomUUID();
-      
-      const { error: insertError } = await supabase.from('telegram_auth_requests').insert({
-        id: sessionId,
-      });
 
+      const { error: insertError } = await supabase
+        .from('telegram_auth_requests')
+        .insert({ id: sessionId });
       if (insertError) throw insertError;
 
       setTelegramSessionId(sessionId);
 
-      const channel = supabase.channel(`telegram_auth_${sessionId}`)
+      // Primary: realtime push the instant the bot verifies
+      const channel = supabase
+        .channel(`telegram_auth_${sessionId}`)
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'telegram_auth_requests', filter: `id=eq.${sessionId}` },
-          async (payload) => {
-            const data = payload.new;
-            if (data.status === 'verified' && data.phone && data.temp_password) {
-              const { error: authError } = await supabase.auth.signInWithPassword({
-                phone: data.phone,
-                password: data.temp_password
-              });
-              
-              if (authError) {
-                setError(authError.message);
-              }
-              
-              await supabase.from('telegram_auth_requests').delete().eq('id', sessionId);
-              channel.unsubscribe();
-              setTelegramSessionId(null);
-              setLoading(false);
-            }
-          }
+          (payload) => completeTelegram(payload.new as any),
         )
         .subscribe();
 
-      let attempts = 0;
-      const interval = setInterval(async () => {
-        attempts++;
-        if (attempts > 150) {
-          clearInterval(interval);
-          setLoading(false);
-          setError("Время ожидания истекло. Попробуйте снова.");
-          return;
-        }
-
-        const { data } = await supabase.from('telegram_auth_requests').select('*').eq('id', sessionId).single();
-        if (data && data.status === 'verified' && data.phone && data.temp_password) {
-          clearInterval(interval);
-          
-          const { error: authError } = await supabase.auth.signInWithPassword({
-            phone: data.phone,
-            password: data.temp_password
-          });
-          
-          if (authError) {
-            setError(authError.message);
-          }
-          
-          await supabase.from('telegram_auth_requests').delete().eq('id', sessionId);
-          channel.unsubscribe();
+      // Fallback: slow poll in case the realtime socket drops. Self-limiting
+      // via the timeout below — never runs unbounded.
+      const startedAt = Date.now();
+      const timer = setInterval(async () => {
+        if (!tgRef.current) return;
+        if (Date.now() - startedAt > TELEGRAM_TIMEOUT_MS) {
+          teardownTelegram(true);
           setTelegramSessionId(null);
           setLoading(false);
+          setError('Время ожидания истекло. Попробуйте снова.');
+          return;
         }
-      }, 2000);
+        const { data } = await supabase
+          .from('telegram_auth_requests')
+          .select('phone, temp_password, status')
+          .eq('id', sessionId)
+          .single();
+        if (data) completeTelegram(data);
+      }, 2500);
 
+      tgRef.current = { channel, timer, sessionId };
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
@@ -166,6 +184,7 @@ export default function LoginPage() {
   };
 
   const cancelTelegramAuth = () => {
+    teardownTelegram(true);
     setTelegramSessionId(null);
     setLoading(false);
   };
@@ -252,36 +271,42 @@ export default function LoginPage() {
               </div>
 
               {/* QR Code for Desktop */}
-              <div style={{ display: typeof window !== 'undefined' && window.innerWidth > 640 ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', padding: '16px', backgroundColor: '#FFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                <div style={{ marginBottom: '12px' }}>
-                  <QrCode data={`https://t.me/MyGreenChickenBot?start=${telegramSessionId}`} size={160} iconSize={0} color="#000000" backgroundColor="#FFFFFF" />
+              {typeof window !== 'undefined' && window.innerWidth > 640 && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px', backgroundColor: '#FFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <QrCode data={`https://t.me/MyGreenChickenBot?start=${telegramSessionId}`} size={160} iconSize={0} color="#000000" backgroundColor="#FFFFFF" />
+                  </div>
+                  <p style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>Отсканируйте камерой телефона</p>
                 </div>
-                <p style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>Отсканируйте камерой телефона</p>
-              </div>
+              )}
 
               {/* Deep link for Mobile */}
-              <a 
-                href={`tg://resolve?domain=MyGreenChickenBot&start=${telegramSessionId}`}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '16px',
-                  backgroundColor: '#0088cc',
-                  color: '#FFF',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  display: typeof window !== 'undefined' && window.innerWidth <= 640 ? 'flex' : 'none',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '8px',
-                  textDecoration: 'none'
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.21-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .24z"/>
-                </svg>
-                Открыть Telegram
-              </a>
+              {typeof window !== 'undefined' && window.innerWidth <= 640 && (
+                <a 
+                  href={`https://t.me/MyGreenChickenBot?start=${telegramSessionId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    borderRadius: '16px',
+                    backgroundColor: '#0088cc',
+                    color: '#FFF',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '8px',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.21-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .24z"/>
+                  </svg>
+                  Открыть Telegram
+                </a>
+              )}
 
               <div style={{ display: 'flex', alignItems: 'center', color: '#059669', backgroundColor: '#ECFDF5', padding: '8px 16px', borderRadius: '8px', fontSize: 14 }}>
                 <span className="icon-material" style={{ fontSize: 16, marginRight: 8, animation: 'spin 1s linear infinite' }}>refresh</span>
