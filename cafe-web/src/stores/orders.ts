@@ -38,6 +38,7 @@ export interface SavedAddress {
   entrance: string | null;
   floor: string | null;
   apartment: string | null;
+  phone: string | null;
   is_default: boolean;
   created_at: string;
   updated_at: string;

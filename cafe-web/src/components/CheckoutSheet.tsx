@@ -24,6 +24,20 @@ interface Props {
 
 const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrderComplete }: Props) {
   const t = useT();
+
+  const COUNTRIES: Country[] = [
+    { code: '+996', flag: '🇰🇬', name: t('country_kg'), format: 'XXX XXX XXX' },
+    { code: '+7', flag: '🇰🇿', name: t('country_kz'), format: '(XXX) XXX-XX-XX' },
+    { code: '+7', flag: '🇷🇺', name: t('country_ru'), format: '(XXX) XXX-XX-XX' },
+    { code: '+998', flag: '🇺🇿', name: t('country_uz'), format: 'XX XXX-XX-XX' },
+    { code: '+994', flag: '🇦🇿', name: t('country_az'), format: 'XX XXX-XX-XX' },
+    { code: '+374', flag: '🇦🇲', name: t('country_am'), format: 'XX XXX-XXX' },
+    { code: '+375', flag: '🇧🇾', name: t('country_by'), format: 'XX XXX-XX-XX' },
+    { code: '+1', flag: '🇺🇸', name: t('country_us'), format: '(XXX) XXX-XXXX' },
+    { code: '+44', flag: '🇬🇧', name: t('country_gb'), format: 'XXXX XXXXXX' },
+    { code: '+971', flag: '🇦🇪', name: t('country_ae'), format: 'XX XXX XXXX' },
+  ];
+
   const { items, getTotalPrice, clearCart } = useCartStore();
   const branches = useBranchesStore(s => s.branches);
   // Only name/phone are needed — subscribing to the whole profile store would
@@ -90,19 +104,26 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
 
   // Auto-select activeDeliveryAddress or default
   useEffect(() => {
+    const applyAddress = (addr: SavedAddress) => {
+      setSelectedAddressId(addr.id);
+      setDeliveryAddress(addr.address);
+      setEntrance(addr.entrance || '');
+      setFloor(addr.floor || '');
+      setApartment(addr.apartment || '');
+      if (addr.phone) {
+        const matchingCountry = COUNTRIES.find(c => addr.phone?.startsWith(c.code));
+        if (matchingCountry) {
+          setSelectedCountry(matchingCountry);
+          setPhone(addr.phone.substring(matchingCountry.code.length).trim().replace(/\D/g, ''));
+        }
+      }
+    };
+
     if (activeDeliveryAddress && !selectedAddressId && !isNewAddress) {
-      setSelectedAddressId(activeDeliveryAddress.id);
-      setDeliveryAddress(activeDeliveryAddress.address);
-      setEntrance(activeDeliveryAddress.entrance || '');
-      setFloor(activeDeliveryAddress.floor || '');
-      setApartment(activeDeliveryAddress.apartment || '');
+      applyAddress(activeDeliveryAddress);
     } else if (savedAddresses.length > 0 && !selectedAddressId && !isNewAddress) {
       const defaultAddr = savedAddresses.find(a => a.is_default) || savedAddresses[0];
-      setSelectedAddressId(defaultAddr.id);
-      setDeliveryAddress(defaultAddr.address);
-      setEntrance(defaultAddr.entrance || '');
-      setFloor(defaultAddr.floor || '');
-      setApartment(defaultAddr.apartment || '');
+      applyAddress(defaultAddr);
     }
   }, [savedAddresses, activeDeliveryAddress, selectedAddressId, isNewAddress]);
 
@@ -114,6 +135,13 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
     setEntrance(addr.entrance || '');
     setFloor(addr.floor || '');
     setApartment(addr.apartment || '');
+    if (addr.phone) {
+      const matchingCountry = COUNTRIES.find(c => addr.phone?.startsWith(c.code));
+      if (matchingCountry) {
+        setSelectedCountry(matchingCountry);
+        setPhone(addr.phone.substring(matchingCountry.code.length).trim().replace(/\D/g, ''));
+      }
+    }
   };
 
   const handleNewAddress = () => {

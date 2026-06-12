@@ -9,6 +9,8 @@ import { useOverlayClose } from '../hooks/useOverlayClose';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useHardwareBack } from '../hooks/useHardwareBack';
 import { useT } from '../i18n/useT';
+import CountrySelectModal from './CountrySelectModal';
+import type { Country } from './CountrySelectModal';
 
 interface Props {
   isOpen: boolean;
@@ -25,6 +27,16 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
   const [entrance, setEntrance] = useState('');
   const [floor, setFloor] = useState('');
   const [apartment, setApartment] = useState('');
+  
+  const [phone, setPhone] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<Country>({
+    code: '+996',
+    flag: '🇰🇬',
+    name: 'Кыргызстан',
+    format: 'XXX XXX XXX'
+  });
+  const [isCountryModalOpen, setIsCountryModalOpen] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
 
   useLockBodyScroll(isOpen);
@@ -40,6 +52,7 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
       setEntrance('');
       setFloor('');
       setApartment('');
+      setPhone('');
     }
   }, [isOpen, fetchAddresses]);
 
@@ -51,7 +64,7 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
   };
 
   const handleSaveNewAddress = async () => {
-    if (!userId || !deliveryAddress.trim()) return;
+    if (!userId || !deliveryAddress.trim() || !phone.trim()) return;
     setIsSaving(true);
     
     // Build full address line for immediate selection
@@ -68,6 +81,7 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
         entrance: entrance.trim() || null,
         floor: floor.trim() || null,
         apartment: apartment.trim() || null,
+        phone: `${selectedCountry.code} ${phone.trim()}`,
         is_default: savedAddresses.length === 0,
       }).select().single();
 
@@ -84,6 +98,7 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
           entrance: entrance.trim() || null,
           floor: floor.trim() || null,
           apartment: apartment.trim() || null,
+          phone: `${selectedCountry.code} ${phone.trim()}`,
           is_default: savedAddresses.length === 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -97,8 +112,10 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
     }
   };
 
-  return createPortal(
-    <div style={{
+  return (
+    <>
+      {createPortal(
+        <div style={{
       position: 'fixed',
       inset: 0,
       zIndex: 9999,
@@ -243,6 +260,38 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
                 />
               </div>
 
+              {/* Phone Input */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <button
+                  className="btn-reset"
+                  onClick={() => setIsCountryModalOpen(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '14px 12px', borderRadius: 14, border: '1.5px solid #E2E8F0',
+                    backgroundColor: '#F8FAFC', fontSize: 15, fontWeight: 600, color: '#1E293B',
+                    flexShrink: 0
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>{selectedCountry.flag}</span>
+                  <span>{selectedCountry.code}</span>
+                  <span className="icon-material" style={{ fontSize: 20, color: '#94A3B8' }}>arrow_drop_down</span>
+                </button>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <input
+                    type="tel"
+                    placeholder={selectedCountry.format}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    style={{
+                      width: '100%', padding: '14px 16px', borderRadius: 14,
+                      border: '1.5px solid #E2E8F0', fontSize: 16, fontWeight: 600,
+                      color: '#1E293B', outline: 'none', letterSpacing: '0.5px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
                 <button
                   className="btn-reset"
@@ -257,11 +306,11 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
                 </button>
                 <button
                   className="btn-reset"
-                  disabled={!deliveryAddress.trim() || isSaving}
+                  disabled={!deliveryAddress.trim() || !phone.trim() || isSaving}
                   onClick={handleSaveNewAddress}
                   style={{
                     flex: 2, padding: '14px', borderRadius: 16,
-                    backgroundColor: deliveryAddress.trim() && !isSaving ? '#22C55E' : '#94A3B8',
+                    backgroundColor: deliveryAddress.trim() && phone.trim() && !isSaving ? '#22C55E' : '#94A3B8',
                     color: '#FFF', fontSize: 15, fontWeight: 700, textAlign: 'center',
                     opacity: isSaving ? 0.7 : 1, transition: 'background-color 0.2s',
                   }}
@@ -275,6 +324,18 @@ const AddressSheet = React.memo(function AddressSheet({ isOpen, onClose }: Props
       </div>
     </div>,
     document.body
+  )}
+      {isCountryModalOpen && (
+        <CountrySelectModal
+          onClose={() => setIsCountryModalOpen(false)}
+          onSelect={(country) => {
+            setSelectedCountry(country);
+            setIsCountryModalOpen(false);
+            setPhone('');
+          }}
+        />
+      )}
+    </>
   );
 });
 
