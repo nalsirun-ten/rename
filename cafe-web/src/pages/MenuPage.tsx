@@ -1,447 +1,494 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useMenuStore } from '../stores/menu';
-import { useNavigationStore } from '../stores/navigation';
+import { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
+import { useMenuStore, DUK_CATEGORIES } from '../stores/menu';
+import { useCartStore } from '../stores/cart';
+import { useOrderStore } from '../stores/orders';
 import MenuCard from '../components/MenuCard';
 import CategoryCard from '../components/CategoryCard';
 import PullToRefresh from '../components/PullToRefresh';
 import { useT } from '../i18n/useT';
-import type { TranslationKey } from '../i18n/translations';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useHardwareBack } from '../hooks/useHardwareBack';
 
-const CATEGORIES_DATA = [
-  { name: 'Chicken', image: '/category_images/chicken.png', count: 12 },
-  { name: 'Sushi', image: '/category_images/sushi.png', count: 8 },
-  { name: 'Pizza', image: '/category_images/pizza.png', count: 5 },
-  { name: 'Kimbap', image: '/category_images/kimbap.png', count: 4 },
-  { name: 'Soups', image: '/category_images/soups.png', count: 6 },
-  { name: 'Main dishes', image: '/category_images/main_dishes.png', count: 10 },
-  { name: 'Drinks', image: '/category_images/drinks.png', count: 15 },
-  { name: 'Side dishes', image: '/category_images/side_dishes.png', count: 7 },
-  { name: 'Noodles', image: '/category_images/noodles.png', count: 9 },
-];
+const CartSheet = lazy(() => import('../components/CartSheet'));
+const CheckoutSheet = lazy(() => import('../components/CheckoutSheet'));
+const AddressSheet = lazy(() => import('../components/AddressSheet'));
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  'Кофе': '☕',
+  'Чай': '🍵',
+  'Лимонады': '🍋',
+  'Напитки': '🥤',
+  'Авторские напитки': '✨',
+  'Выпечка': '🥐',
+  'Десерты': '🍰',
+  'Завтраки': '🍳',
+  'Салаты': '🥗',
+  'Супы': '🍜',
+  'Горячие блюда': '🍖',
+  'Паста': '🍝',
+  'Пицца': '🍕',
+  'Бургеры': '🍔',
+  'Сэндвичи': '🥪',
+  'Суши': '🍣',
+  'Роллы': '🍱',
+  'Закуски': '🥨',
+  'Гарниры': '🍚',
+  'Соусы': '🧈',
+  'Фреши': '🧃',
+  'Смузи': '🥤',
+  'Молочные коктейли': '🥛',
+  'Детское меню': '👶',
+  'Бизнес-ланчи': '💼',
+  'Вегетарианское меню': '🥬',
+  'Мороженое': '🍦',
+  'Блины и панкейки': '🥞',
+  'Стейки': '🥩',
+  'Гриль и мангал': '🔥',
+  'Боулы и Поке': '🥣',
+  'Морепродукты': '🦐',
+  'WOK': '🥘',
+  'Шаурма и Донеры': '🌯',
+  'Хот-доги': '🌭',
+  'Пироги': '🥧',
+  'Сеты': '🍱',
+  'Сезонное меню': '🌸',
+  'Алкогольные коктейли': '🍸',
+  'Соки и Воды': '🧊',
+};
+
+// Categories with DUK images (image overrides emoji)
+const CATEGORY_IMAGE: Record<string, string> = {
+  'Курица':         '/category_images/cat_chicken_1781168830514-removebg-preview.webp',
+  'Напитки':        '/category_images/cat_drinks_1781174228324-removebg-preview.webp',
+  'Кимбап':         '/category_images/cat_kimbap_1781168876530-removebg-preview.webp',
+  'Горячие блюда':  '/category_images/cat_main_dishes_1781168963104-removebg-preview.webp',
+  'Лапша':          '/category_images/cat_noodles_1781169005744-removebg-preview.webp',
+  'Пицца':          '/category_images/cat_pizza_1781168865515-removebg-preview.webp',
+  'Гарниры':        '/category_images/cat_side_dishes_1781174239254-removebg-preview.webp',
+  'Супы':           '/category_images/cat_soups_1781168889004-removebg-preview.webp',
+  'Роллы':           '/category_images/cat_sushi_1781168847922-removebg-preview.webp',
+  'Десерты':        '/category_images/cat_desserts_1781177166251-removebg-preview.webp',
+  'Соусы':          '/category_images/cat_sauces_1781176696071-removebg-preview.webp',
+  'Кофе':           '/category_images/cat_coffee_1781186991524-removebg-preview.webp',
+  'Чай':            '/category_images/cat_tea_1781186983122-removebg-preview.webp',
+  'Лимонады':       '/category_images/cat_lemonades_white-removebg-preview.webp',
+  'Молочные коктейли': '/category_images/cat_milkshakes_white-removebg-preview.webp',
+  'Смузи':          '/category_images/cat_smoothies_white-removebg-preview.webp',
+};
+
+// Clean distinct colors for each DUK category
+const CATEGORY_COLOR: Record<string, string> = {
+  'Пицца':          '#E89040',
+  'Роллы':           '#5090E0',
+  'Курица':         '#E0B040',
+  'Кимбап':         '#40C840',
+  'Горячие блюда':  '#E04868',
+  'Лапша':          '#B8D848',
+  'Гарниры':        '#8858D0',
+  'Супы':           '#30B8B0',
+  'Напитки':        '#4888E8',
+  'Десерты':        '#E048A0',
+  'Соусы':          '#C88840',
+  'Кофе':           '#A06048',
+  'Чай':            '#50B050',
+  'Лимонады':       '#F0D040',
+  'Молочные коктейли': '#D0B8E8',
+  'Смузи':          '#F06060',
+};
+
+// How many cards are revealed initially / added per scroll step.
+// Data is already local — this only limits DOM size, not network.
+const REVEAL_STEP = 16;
 
 export default function MenuPage() {
-  const { items, categories, searchQuery, activeTab, sortBy, setSearchQuery, setActiveTab, setSortBy, fetchMoreMenuItems, page, categoryFilter, setCategoryFilter } = useMenuStore();
-  const sortOptions = useMemo(() => ['', ...categories], [categories]);
+  const { items, categoryFilter, setCategoryFilter, searchQuery, setSearchQuery, categoryCounts } = useMenuStore();
   const t = useT();
   const isLoading = useMenuStore(s => s.isLoading);
-  const isLoadingMore = useMenuStore(s => s.isLoadingMore);
-  const hasMore = useMenuStore(s => s.hasMore);
-  const isPageActive = useNavigationStore(s => s.activeTab) === 2; // menu tab
-  const isVirtualizerActive = isPageActive && activeTab === 'Меню'; // only when menu sub-tab is visible
-  const [isSortOpen, setIsSortOpen] = useState(false);
-  const sortRef = useRef<HTMLDivElement>(null);
+  const cartItems = useCartStore(s => s.items);
+  const cartTotalItems = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  const cartTotalPrice = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isAddressSheetOpen, setIsAddressSheetOpen] = useState(false);
+  const activeDeliveryAddress = useOrderStore(s => s.activeDeliveryAddress);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleRefresh = async () => {
     await useMenuStore.getState().fetchMenuItems(true);
   };
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
-        setIsSortOpen(false);
-      }
-    };
-    if (isSortOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isSortOpen]);
-
-  // Swipe logic
-  const [touchStart, setTouchStart] = useState<{x: number, y: number} | null>(null);
-  const [touchEnd, setTouchEnd] = useState<{x: number, y: number} | null>(null);
-  const minSwipeDistance = 50;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distanceX = touchStart.x - touchEnd.x;
-    const distanceY = Math.abs(touchStart.y - touchEnd.y);
-
-    // Only switch tabs if horizontal movement is dominant (not a vertical scroll)
-    if (Math.abs(distanceX) < minSwipeDistance || distanceY > Math.abs(distanceX)) return;
-
-    if (distanceX > 0 && activeTab === 'Меню') {
-      setActiveTab('Бизнес ланч');
-    } else if (distanceX < 0 && activeTab === 'Бизнес ланч') {
-      setActiveTab('Меню');
+  // All filtering is client-side over the fully-cached menu — instant,
+  // zero network on category navigation and search.
+  const filteredItems = useMemo(() => {
+    let result = items;
+    if (categoryFilter) {
+      result = result.filter((item) => item.category === categoryFilter);
     }
-  };
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [items, categoryFilter, searchQuery]);
+
+  // Incremental reveal keeps the DOM light; growing it is a local state
+  // change — no network, no spinner, no content-height instability.
+  const [visibleCount, setVisibleCount] = useState(REVEAL_STEP);
+  useEffect(() => {
+    setVisibleCount(REVEAL_STEP);
+  }, [categoryFilter, searchQuery]);
+
+  const visibleItems = filteredItems.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredItems.length;
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
-      fetchMoreMenuItems();
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 400) {
+      setVisibleCount((c) => (c < filteredItems.length ? c + REVEAL_STEP : c));
     }
-  }, [fetchMoreMenuItems]);
+  }, [filteredItems.length]);
 
-  const filteredItems = useMemo(() => {
-    const filtered = items.filter((item) =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const handleBackToCategories = useCallback(() => {
+    setCategoryFilter('');
+    setSearchQuery('');
+  }, []);
 
-    // Only sort by category filter — NO favorite sorting to avoid jumps on pagination
-    if (sortBy !== '') {
-      filtered.sort((a, b) => {
-        if (a.category === sortBy && b.category !== sortBy) return -1;
-        if (a.category !== sortBy && b.category === sortBy) return 1;
-        return 0;
-      });
-    }
+  useHardwareBack(handleBackToCategories, !!categoryFilter || !!searchQuery);
 
-    return filtered;
-  }, [items, searchQuery, sortBy]);
+  // Scroll to top when entering a category (or going back to categories list)
+  useEffect(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [categoryFilter]);
 
-  // Only show items up to the current page (8 per page).
-  // Pagination works correctly even when IndexedDB cache holds extra items.
-  const VISIBLE_COUNT = page * 8;
-  const visibleItems = filteredItems.slice(0, VISIBLE_COUNT);
-
-  // Only run virtualizer when menu sub-tab is visible.
-  // When hidden (Business Lunch or another page) — no observers, no CPU.
-  const virtualizer = useVirtualizer({
-    count: isVirtualizerActive ? visibleItems.length : 0,
-    getScrollElement: () => isVirtualizerActive ? scrollContainerRef.current : null,
-    estimateSize: () => 140,
-    overscan: isVirtualizerActive ? 5 : 0,
-  });
+  const showCategories = !categoryFilter;
 
   return (
-      <div
-        style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        width: '100%',
-        background: 'linear-gradient(to bottom, #1B5E3D 50%, #FEF9F5 50%)',
-      }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      width: '100%',
+      background: 'linear-gradient(to bottom, #1B5E3D 50%, #FEF9F5 50%)',
+    }}>
       {/* ─── Header ─── */}
       <div style={{
-        paddingTop: categoryFilter ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : 'calc(env(safe-area-inset-top, 0px) + 24px)',
-        paddingBottom: categoryFilter ? '8px' : '16px',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+        paddingBottom: '16px',
         position: 'sticky',
         top: 0,
         zIndex: 10,
         backgroundColor: '#1B5E3D',
       }}>
         {/* Title */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: categoryFilter ? 12 : 24 }}>
-          <span style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 700, color: '#FFF' }}>
-            {t('menu_title')}
-          </span>
-        </div>
-
-        {/* Tabs */}
-        {!categoryFilter && (
-          <div style={{ display: 'flex', margin: '0 12px', borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
-            <button
-              className="btn-reset"
-              onClick={() => setActiveTab('Меню')}
-              style={{
-                flex: 1,
-                paddingBottom: 10,
-                borderBottom: activeTab === 'Меню' ? '3px solid #FFF' : '3px solid transparent',
-                color: activeTab === 'Меню' ? '#FFF' : 'rgba(255,255,255,0.7)',
-                fontSize: 'clamp(15px, 3.8rem, 21px)',
-                fontWeight: 700,
-                textAlign: 'center',
-                transition: 'all 0.2s',
-              }}
-            >
-              {t('nav_menu')}
-            </button>
-            <button
-              className="btn-reset"
-              onClick={() => setActiveTab('Бизнес ланч')}
-              style={{
-                flex: 1,
-                paddingBottom: 10,
-                borderBottom: activeTab === 'Бизнес ланч' ? '3px solid #FFF' : '3px solid transparent',
-                color: activeTab === 'Бизнес ланч' ? '#FFF' : 'rgba(255,255,255,0.7)',
-                fontSize: 'clamp(15px, 3.8rem, 21px)',
-                fontWeight: 700,
-                textAlign: 'center',
-                transition: 'all 0.2s',
-              }}
-            >
-              {t('menu_tab_business_lunch')}
-            </button>
+        {showCategories && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+            <span style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 700, color: '#FFF' }}>
+              {t('menu_title')}
+            </span>
           </div>
         )}
+
+        {/* Top Header Row */}
+        {showCategories ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', marginBottom: 0 }}>
+            {/* Address Selector */}
+            <button
+              className="btn-reset"
+              onClick={() => setIsAddressSheetOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%', backgroundColor: '#F5A623',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <span className="icon-material" style={{ color: '#FFF', fontSize: 18 }}>location_on</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  Доставка
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 15, color: '#FFF', fontWeight: 700, maxWidth: 150, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {activeDeliveryAddress ? (activeDeliveryAddress.label || activeDeliveryAddress.address.split(',')[0]) : 'Укажите адрес'}
+                  </span>
+                  <span className="icon-material" style={{ color: '#FFF', fontSize: 16 }}>expand_more</span>
+                </div>
+              </div>
+            </button>
+
+            {/* Cart Icon */}
+            <button className="btn-reset" onClick={() => setIsCartOpen(true)} style={{ position: 'relative', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#3B82F6', borderRadius: '50%' }}>
+              <span className="icon-material" style={{ color: '#FFF', fontSize: 22 }}>shopping_cart</span>
+              {cartTotalItems > 0 && (
+                <div style={{
+                  position: 'absolute', top: -4, right: -4, width: 20, height: 20, borderRadius: '50%',
+                  backgroundColor: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700, color: '#FFF', border: '2px solid #1B5E3D'
+                }}>
+                  {cartTotalItems}
+                </div>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, position: 'relative', padding: '0 16px' }}>
+            <button
+              className="btn-reset flex-center"
+              onClick={handleBackToCategories}
+              style={{
+                position: 'absolute',
+                left: 16,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255,255,255,0.15)',
+              }}
+            >
+              <span className="icon-material" style={{ fontSize: 24, color: '#FFF' }}>arrow_back</span>
+            </button>
+            <span style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 700, color: '#FFF' }}>
+              {searchQuery ? t('menu_search_results') : categoryFilter}
+            </span>
+          </div>
+        )}
+
+
       </div>
 
       {/* ─── Body ─── */}
       <div style={{ flex: 1, minHeight: 0 }}>
         <PullToRefresh ref={scrollContainerRef} onRefresh={handleRefresh} onScroll={handleScroll}>
-          <div 
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={{
+          <div style={{
             flex: 1,
             backgroundColor: '#FFFFFF',
             display: 'flex',
             flexDirection: 'column',
+            minHeight: '100%',
             position: 'relative',
             zIndex: 1,
           }}>
-        {/* Menu Tab */}
-          <div style={{ display: activeTab === 'Меню' ? 'block' : 'none' }}>
-            {!categoryFilter ? (
-              <>
-                {/* Title & Dot */}
-                <div style={{ display: 'flex', alignItems: 'center', padding: '20px 16px 16px 16px' }}>
-                  <h2 style={{ fontSize: 'clamp(18px, 4.8rem, 24px)', fontWeight: 800, color: '#1E293B', marginRight: 8 }}>
-                    {t('menu_our_menu')}
-                  </h2>
-                  <div style={{ 
-                    width: 8, 
-                    height: 8, 
-                    borderRadius: '50%', 
-                    backgroundColor: '#22C55E',
-                    boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)'
-                  }} />
-                </div>
-                
-                {/* Categories List */}
-                <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column' }}>
-                  {CATEGORIES_DATA.map(cat => (
-                    <CategoryCard 
-                      key={cat.name}
-                      name={cat.name}
-                      count={cat.count}
-                      imageUrl={cat.image}
-                      onClick={() => setCategoryFilter(cat.name)}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 8px 16px' }}>
-                  <button className="btn-reset flex-center" onClick={() => setCategoryFilter('')} style={{ marginRight: 12, width: 40, height: 40, backgroundColor: '#F1F5F9', borderRadius: '50%' }}>
-                    <span className="icon-material" style={{ fontSize: 28, color: '#1E293B' }}>arrow_back</span>
-                  </button>
-                  <h2 style={{ fontSize: 'clamp(20px, 5.1rem, 26px)', fontWeight: 800, color: '#1E293B' }}>
-                    {categoryFilter}
-                  </h2>
-                </div>
+            {/* Title for categories (moved above Search Bar) */}
+            {showCategories && (
+              <div style={{ display: 'flex', alignItems: 'center', padding: '20px 16px 16px 16px' }}>
+                <h2 style={{ fontSize: 'clamp(18px, 4.8rem, 24px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
+                  {t('menu_categories_title')}
+                </h2>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)'
+                }} />
+              </div>
+            )}
 
-                {/* Search Bar & Filter Button */}
-                <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px', marginBottom: 24 }}>
-                  <div style={{
-                    flex: 1,
-                    minWidth: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: 24,
-                    padding: '0 16px',
-                    height: 48,
-                    border: '1.5px solid #94A3B8',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-                    marginRight: 12,
-                  }}>
-                    <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', color: '#000000', marginRight: 10 }}>
-                      search
-                    </span>
-                    <input
-                      className="black-placeholder"
-                      type="text"
-                      placeholder={t('menu_search_placeholder')}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        border: 'none',
-                        outline: 'none',
-                        backgroundColor: 'transparent',
-                        fontSize: 'clamp(16px, 4rem, 22px)',
-                        fontWeight: 500,
-                        color: '#000000',
-                      }}
-                    />
-                  </div>
-                  <div style={{ position: 'relative' }} ref={sortRef}>
-                    <button
-                      className="btn-reset flex-center"
-                      onClick={() => setIsSortOpen(!isSortOpen)}
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '50%',
-                        backgroundColor: '#1E293B',
-                        flexShrink: 0,
-                        boxShadow: '0 4px 12px rgba(30,41,59,0.2)',
-                      }}
-                    >
-                      <span className="icon-material" style={{ fontSize: 'clamp(24px, 6.1rem, 34px)', color: '#FFF' }}>
-                        tune
-                      </span>
+            {/* Search Bar MOVED HERE */}
+            {!showCategories && (
+              <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px 16px 16px' }}>
+                <div style={{
+                  flex: 1, minWidth: 0, display: 'flex', alignItems: 'center',
+                  backgroundColor: '#FFFFFF', borderRadius: 24, padding: '0 16px', height: 48,
+                  border: '1.5px solid #94A3B8', boxShadow: '0 4px 16px rgba(0,0,0,0.06)'
+                }}>
+                  <span className="icon-material" style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', color: '#000000', marginRight: 10 }}>search</span>
+                  <input
+                    className="black-placeholder"
+                    type="text"
+                    placeholder={t('menu_search_placeholder')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      flex: 1, minWidth: 0, border: 'none', outline: 'none',
+                      backgroundColor: 'transparent', fontSize: 'clamp(16px, 4rem, 22px)',
+                      fontWeight: 500, color: '#000000'
+                    }}
+                  />
+                  {searchQuery && (
+                    <button className="btn-reset flex-center" onClick={() => setSearchQuery('')} style={{ width: 40, height: 40 }}>
+                      <span className="icon-material" style={{ fontSize: 24, color: '#94A3B8' }}>close</span>
                     </button>
-
-                    {isSortOpen && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 56,
-                        right: 0,
-                        width: 280,
-                        backgroundColor: '#FFF',
-                        borderRadius: 16,
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                        zIndex: 100,
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column'
-                      }}>
-                        <div style={{ padding: '16px 16px 8px 16px', fontSize: 13, fontWeight: 700, color: '#94A3B8' }}>
-                          {t('menu_sort_label')}
-                        </div>
-                        {sortOptions.map((option, index) => {
-                          const label = option === '' ? t('menu_sort_none') : option;
-
-                          return (
-                            <button
-                              key={option}
-                              className="btn-reset"
-                              onClick={() => {
-                                setSortBy(option);
-                                setIsSortOpen(false);
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '16px 16px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                borderBottom: index !== sortOptions.length - 1 ? '1px solid #F1F5F9' : 'none',
-                                color: '#1E293B',
-                                fontSize: 'clamp(15px, 3.8rem, 21px)',
-                                fontWeight: sortBy === option ? 700 : 500,
-                                backgroundColor: sortBy === option ? '#F8FAFC' : 'transparent',
-                              }}
-                            >
-                              {label}
-                              {sortBy === option && (
-                                <span className="icon-material" style={{ color: '#10B981', fontSize: 'clamp(20px, 5.1rem, 28px)' }}>check</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
+              </div>
+            )}
 
-            {/* List */}
-            <div style={{ paddingBottom: 100 }}>
-              {isLoading && filteredItems.length === 0 ? (
-                // Skeletons — match MenuCard layout exactly
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} style={{
-                    padding: '12px 0',
-                    margin: '0 12px',
-                    borderBottom: '1px solid #000000',
+            {/* Categories View */}
+            {showCategories ? (
+              <div style={{ paddingBottom: 100 }}>
+                {/* Category List — 1 per row */}
+                {isLoading && items.length === 0 ? (
+                  <div style={{
                     display: 'flex',
-                    alignItems: 'stretch',
+                    flexDirection: 'column',
+                    gap: 8,
+                    padding: '0 12px',
                   }}>
-                    {/* Image placeholder */}
-                    <div className="skeleton-pulse" style={{
-                      flexShrink: 0,
-                      width: 'clamp(96px, 24.5rem, 140px)',
-                      height: 'clamp(96px, 24.5rem, 140px)',
-                      borderRadius: 12,
-                      marginRight: 16,
-                    }} />
-                    {/* Text content */}
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', paddingTop: 2, paddingBottom: 2, paddingRight: 44 }}>
-                      <div className="skeleton-pulse" style={{ width: '80%', height: 20, borderRadius: 10, marginBottom: 8 }} />
-                      <div className="skeleton-pulse" style={{ width: '100%', height: 15, borderRadius: 7, marginBottom: 4 }} />
-                      <div className="skeleton-pulse" style={{ width: '60%', height: 15, borderRadius: 7, marginBottom: 'auto' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div className="skeleton-pulse" style={{ width: 60, height: 24, borderRadius: 12 }} />
-                        <div className="skeleton-pulse" style={{ width: 36, height: 36, borderRadius: 12 }} />
-                      </div>
-                    </div>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="skeleton-pulse" style={{
+                        borderRadius: 16,
+                        height: 100,
+                      }} />
+                    ))}
                   </div>
-                ))
-              ) : filteredItems.length > 0 ? (
-                <>
-                  <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-                    {virtualizer.getVirtualItems().map((virtualItem) => {
-                      const item = visibleItems[virtualItem.index];
-                      return (
-                        <div
-                          key={virtualItem.key}
-                          data-index={virtualItem.index}
-                          ref={virtualizer.measureElement}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            transform: `translateY(${virtualItem.start}px)`,
-                          }}
-                        >
-                          <MenuCard item={item} />
+                ) : (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    padding: '0 12px',
+                  }}>
+                    {DUK_CATEGORIES.map((cat) => (
+                      <CategoryCard
+                        key={cat}
+                        name={cat}
+                        count={categoryCounts[cat] || 0}
+                        emoji={CATEGORY_EMOJI[cat] || '📋'}
+                        imageUrl={CATEGORY_IMAGE[cat]}
+                        imageSize={cat === 'Гарниры' ? 150 : undefined}
+                        color={CATEGORY_COLOR[cat] || '#EFF8FF'}
+                        onClick={() => setCategoryFilter(cat)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ paddingBottom: 100 }}>
+                {isLoading && filteredItems.length === 0 ? (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 8,
+                    padding: '0 12px',
+                  }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 16,
+                        overflow: 'hidden',
+                        boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
+                      }}>
+                        <div className="skeleton-pulse" style={{ width: '100%', aspectRatio: '1 / 1' }} />
+                        <div style={{ padding: '10px 10px 12px 10px' }}>
+                          <div className="skeleton-pulse" style={{ width: '80%', height: 14, borderRadius: 7, marginBottom: 8 }} />
+                          <div className="skeleton-pulse" style={{ width: '100%', height: 11, borderRadius: 6, marginBottom: 4 }} />
+                          <div className="skeleton-pulse" style={{ width: '60%', height: 11, borderRadius: 6, marginBottom: 12 }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <div className="skeleton-pulse" style={{ width: 50, height: 20, borderRadius: 10 }} />
+                            <div className="skeleton-pulse" style={{ width: 36, height: 20, borderRadius: 10 }} />
+                          </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
-                  {/* Loading more indicator */}
-                  {isLoadingMore && (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 0 24px 0', gap: 10 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(27, 94, 61, 0.2)', borderTopColor: '#1B5E3D', animation: 'rm-spin .6s linear infinite' }} />
-                      <span style={{ fontSize: 'clamp(14px, 3.6rem, 18px)', color: '#94A3B8', fontWeight: 500 }}>{t('loading')}</span>
+                ) : filteredItems.length > 0 ? (
+                  <>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: 8,
+                      padding: '0 12px',
+                      paddingTop: 4,
+                    }}>
+                      {visibleItems.map((item) => (
+                        <MenuCard key={item.id} item={item} />
+                      ))}
                     </div>
-                  )}
-                  {!hasMore && visibleItems.length >= 8 && (
-                    <div style={{ textAlign: 'center', padding: '16px 0 24px 0', color: '#94A3B8', fontSize: 13, fontWeight: 500 }}>
-                      {t('menu_all_loaded')}
+                    {/* ── Footer — data is fully local, so there is no loading
+                        spinner anymore; just the end-of-list marker ── */}
+                    <div style={{ minHeight: 56, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 0 24px 0' }}>
+                      {!hasMore && visibleItems.length >= 8 && (
+                        <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: 13, fontWeight: 500 }}>
+                          {t('menu_all_loaded')}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '40px 16px', color: '#94A3B8' }}>
-                  <span className="icon-material" style={{ fontSize: 'clamp(48px, 12.3rem, 68px)', marginBottom: 12 }}>
-                    search_off
-                  </span>
-                  <p style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500 }}>{t('menu_not_found')}</p>
-                </div>
-              )}
-            </div>
-              </>
+                  </>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '40px 16px', color: '#94A3B8' }}>
+                    <span className="icon-material" style={{ fontSize: 'clamp(48px, 12.3rem, 68px)', marginBottom: 12 }}>
+                      search_off
+                    </span>
+                    <p style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500 }}>{t('menu_not_found')}</p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
+        </PullToRefresh>
+      </div>
 
-        {/* Business Lunch Tab */}
-          <div
-            className="flex-center"
+      {/* ─── Cart FAB ─── */}
+      {cartTotalItems > 0 && (
+        <div style={{
+          position: 'absolute',
+          bottom: 80,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 20,
+        }}>
+          <button
+            className="btn-reset"
+            onClick={() => setIsCartOpen(true)}
             style={{
-              display: activeTab === 'Бизнес ланч' ? 'flex' : 'none',
-            flex: 1,
-            padding: '40px 16px',
-            flexDirection: 'column',
-            color: '#94A3B8'
-          }}
-        >
-          <span className="icon-material" style={{ fontSize: 'clamp(48px, 12.3rem, 68px)', marginBottom: 16 }}>restaurant</span>
-          <p style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 600 }}>{t('menu_business_lunch_dev')}</p>
-          </div>
-      </div>
-      </PullToRefresh>
-      </div>
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '12px 20px',
+              backgroundColor: '#1B5E3D',
+              borderRadius: 20,
+              boxShadow: '0 4px 20px rgba(27, 94, 61, 0.35)',
+            }}
+          >
+            <div style={{ position: 'relative' }}>
+              <span className="icon-material" style={{ fontSize: 22, color: '#FFF' }}>shopping_cart</span>
+              <div style={{
+                position: 'absolute',
+                top: -8,
+                right: -10,
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                backgroundColor: '#EF4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#FFF' }}>{cartTotalItems}</span>
+              </div>
+            </div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#FFF' }}>
+              {cartTotalPrice} {t('som')}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* ─── Address Sheet ─── */}
+      <Suspense fallback={null}>
+        <AddressSheet
+          isOpen={isAddressSheetOpen}
+          onClose={() => setIsAddressSheetOpen(false)}
+        />
+      </Suspense>
+
+      {/* ─── Cart Sheet ─── */}
+      <Suspense fallback={null}>
+        <CartSheet
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          onCheckout={() => setIsCheckoutOpen(true)}
+        />
+      </Suspense>
+
+      {/* ─── Checkout Sheet ─── */}
+      <Suspense fallback={null}>
+        <CheckoutSheet
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          onOrderComplete={() => setIsCheckoutOpen(false)}
+        />
+      </Suspense>
     </div>
   );
 }

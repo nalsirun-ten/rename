@@ -11,27 +11,28 @@ export interface Country {
   format: string; // e.g. "XXX XXX XXX"
 }
 
-export const COUNTRIES: Country[] = [
-  { code: '+996', flag: '🇰🇬', name: 'Кыргызстан', format: 'XXX XXX XXX' },
-  { code: '+7', flag: '🇰🇿', name: 'Казахстан', format: '(XXX) XXX-XX-XX' },
-  { code: '+7', flag: '🇷🇺', name: 'Россия', format: '(XXX) XXX-XX-XX' },
-  { code: '+998', flag: '🇺🇿', name: 'Узбекистан', format: 'XX XXX-XX-XX' },
-  { code: '+994', flag: '🇦🇿', name: 'Азербайджан', format: 'XX XXX-XX-XX' },
-  { code: '+374', flag: '🇦🇲', name: 'Армения', format: 'XX XXX-XXX' },
-  { code: '+375', flag: '🇧🇾', name: 'Беларусь', format: 'XX XXX-XX-XX' },
-  { code: '+1', flag: '🇺🇸', name: 'США', format: '(XXX) XXX-XXXX' },
-  { code: '+44', flag: '🇬🇧', name: 'Великобритания', format: 'XXXX XXXXXX' },
-  { code: '+971', flag: '🇦🇪', name: 'ОАЭ', format: 'XX XXX XXXX' },
-];
-
 interface Props {
   onClose: () => void;
   onSelect: (country: Country) => void;
-  selectedCode: string;
+  selectedCode?: string;
 }
 
-export default function CountrySelectModal({ onClose, onSelect, }: Props) {
+export default function CountrySelectModal({ onSelect, onClose }: Props) {
   const t = useT();
+
+  const COUNTRIES: Country[] = [
+    { code: '+996', flag: '🇰🇬', name: t('country_kg'), format: 'XXX XXX XXX' },
+    { code: '+7', flag: '🇰🇿', name: t('country_kz'), format: '(XXX) XXX-XX-XX' },
+    { code: '+7', flag: '🇷🇺', name: t('country_ru'), format: '(XXX) XXX-XX-XX' },
+    { code: '+998', flag: '🇺🇿', name: t('country_uz'), format: 'XX XXX-XX-XX' },
+    { code: '+994', flag: '🇦🇿', name: t('country_az'), format: 'XX XXX-XX-XX' },
+    { code: '+374', flag: '🇦🇲', name: t('country_am'), format: 'XX XXX-XXX' },
+    { code: '+375', flag: '🇧🇾', name: t('country_by'), format: 'XX XXX-XX-XX' },
+    { code: '+1', flag: '🇺🇸', name: t('country_us'), format: '(XXX) XXX-XXXX' },
+    { code: '+44', flag: '🇬🇧', name: t('country_gb'), format: 'XXXX XXXXXX' },
+    { code: '+971', flag: '🇦🇪', name: t('country_ae'), format: 'XX XXX XXXX' },
+  ];
+
   const sheetRef = useSwipeToClose(onClose);
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);

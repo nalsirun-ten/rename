@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
 import { useBranchesStore, isBranchOpenNow } from '../stores/branches';
 import { useT } from '../i18n/useT';
 
@@ -165,7 +165,7 @@ export default function BranchesMap() {
         onClick={() => setMapError(false)} 
         style={{ marginTop: 24, padding: '12px 24px', backgroundColor: '#F1F5F9', borderRadius: 12, fontWeight: 600, color: '#475569' }}
       >
-        Попробовать снова
+        {t('try_again')}
       </button>
     </div>
   );
@@ -177,6 +177,9 @@ export default function BranchesMap() {
   return (
     <div style={{ flex: 1, width: '100%', height: '100%', position: 'relative' }}>
       <MapErrorBoundary fallback={fallbackUI}>
+        {/* APIProvider here (not in App) — the Maps SDK script is only fetched
+            when this lazy-loaded page actually renders a map. */}
+        <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         <Map
           defaultCenter={DEFAULT_CENTER}
           defaultZoom={DEFAULT_ZOOM}
@@ -201,6 +204,7 @@ export default function BranchesMap() {
             />
           ))}
         </Map>
+        </APIProvider>
       </MapErrorBoundary>
     </div>
   );

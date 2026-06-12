@@ -1,6 +1,8 @@
-import React from 'react';
-import { type MenuItem, useMenuStore } from '../stores/menu';
+import React, { useCallback } from 'react';
+import { type MenuItem } from '../stores/menu';
+import { useCartStore } from '../stores/cart';
 import { useT } from '../i18n/useT';
+import { thumbnailUrl } from '../utils/imageUrl';
 
 interface Props {
   item: MenuItem;
@@ -8,118 +10,135 @@ interface Props {
 
 const MenuCard = React.memo(function MenuCard({ item }: Props) {
   const t = useT();
-  const toggleFavorite = useMenuStore((s) => s.toggleFavorite);
+  // Subscribe ONLY to this item's cart state — avoids re-rendering all cards when one changes
+  const cartEntry = useCartStore(s => s.items.find(ci => ci.id === item.id));
+  const isInCart = !!cartEntry;
+  const cartQuantity = cartEntry?.quantity || 0;
+
+  const handleCartAction = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { addItem, incrementQuantity } = useCartStore.getState();
+    if (isInCart) {
+      incrementQuantity(item.id);
+    } else {
+      addItem({ id: item.id, title: item.title, price: item.price, imageUrl: item.imageUrl });
+    }
+  }, [item.id, item.title, item.price, item.imageUrl, isInCart]);
+
+  const thumb = thumbnailUrl(item.imageUrl, 400);
 
   return (
     <div style={{
-      padding: '12px 0',
-      margin: '0 12px',
-      borderBottom: '1px solid #000000',
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
+      overflow: 'hidden',
+      boxShadow: '3px 4px 10px rgba(0,0,0,0.08)',
+      border: '1.5px solid #94A3B8',
       display: 'flex',
-      alignItems: 'stretch',
+      flexDirection: 'column',
     }}>
-      {/* Left: Image */}
+      {/* Image */}
       <div style={{
-        flexShrink: 0,
-        width: 'clamp(96px, 24.5rem, 140px)',
-        height: 'clamp(96px, 24.5rem, 140px)',
-        borderRadius: 12,
+        position: 'relative',
+        width: '100%',
+        aspectRatio: '1 / 1',
         overflow: 'hidden',
-        marginRight: 16,
-        backgroundColor: '#E2E8F0',
+        backgroundColor: '#F1F5F9',
       }}>
         <img
-          src={item.imageUrl}
+          src={thumb}
           alt={item.title}
           loading="lazy"
+          decoding="async"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
+        {/* Cart quantity badge */}
+        {isInCart && (
+          <div style={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            backgroundColor: '#1B5E3D',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#FFF' }}>{cartQuantity}</span>
+          </div>
+        )}
       </div>
 
-      {/* Right: Content */}
+      {/* Content */}
       <div style={{
+        padding: '10px 10px 12px 10px',
         flex: 1,
-        minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'flex-start',
-        position: 'relative',
-        paddingTop: 2,
-        paddingBottom: 2,
+        gap: 4,
       }}>
-        <div style={{ paddingRight: 44 }}>
-          {/* Title */}
-          <h3 style={{
-            fontSize: 'clamp(15px, 3.8rem, 21px)',
-            fontWeight: 600,
-            color: '#0F172A',
-            marginBottom: 6,
-            marginTop: -4,
-            lineHeight: 1.2,
-          }}>
-            {item.title}
-          </h3>
-          
-          {/* Description */}
-          <p style={{
-            fontSize: 'clamp(12px, 3.1rem, 16px)',
-            fontWeight: 400,
-            color: '#334155',
-            marginBottom: 8,
-            lineHeight: 1.35,
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}>
-            {item.description}
-          </p>
-        </div>
+        {/* Title */}
+        <h3 style={{
+          fontSize: 'clamp(12px, 3.2rem, 15px)',
+          fontWeight: 600,
+          color: '#0F172A',
+          margin: 0,
+          lineHeight: 1.3,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}>
+          {item.title}
+        </h3>
 
-        {/* Footer: Price & Calories */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingRight: 44 }}>
-          <div style={{ fontSize: 'clamp(15px, 3.8rem, 20px)', fontWeight: 600, color: '#0F172A' }}>
-            {item.price} <span style={{ fontSize: 'clamp(11px, 2.8rem, 14px)', fontWeight: 700, color: '#64748B', letterSpacing: 0.5 }}>{t('som')}</span>
+        {/* Description */}
+        <p style={{
+          fontSize: 'clamp(10px, 2.6rem, 13px)',
+          fontWeight: 400,
+          color: '#64748B',
+          margin: 0,
+          lineHeight: 1.3,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          flex: 1,
+        }}>
+          {item.description}
+        </p>
+
+        {/* Footer: Price + Add to cart */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 4 }}>
+          <div style={{ fontSize: 'clamp(13px, 3.4rem, 17px)', fontWeight: 700, color: '#0F172A' }}>
+            {item.price} <span style={{ fontSize: 'clamp(10px, 2.6rem, 12px)', fontWeight: 600, color: '#64748B' }}>{t('som')}</span>
           </div>
-          {item.kcal && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, backgroundColor: '#EFF6FF', padding: '2px 8px', borderRadius: 12 }}>
-              <span className="icon-material" style={{ fontSize: 'clamp(12px, 3.1rem, 16px)', color: '#3B82F6' }}>local_fire_department</span>
-              <span style={{ fontSize: 'clamp(11px, 2.8rem, 14px)', fontWeight: 700, color: '#475569' }}>{item.kcal} {t('kcal_abbr')}</span>
-            </div>
-          )}
+          <button
+            className="btn-reset flex-center"
+            onClick={handleCartAction}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 10,
+              backgroundColor: isInCart ? '#1B5E3D' : '#F1F5F9',
+              transition: 'all 0.15s',
+              border: isInCart ? 'none' : '1px solid #E2E8F0',
+            }}
+          >
+            <span className="icon-material" style={{
+              fontSize: 18,
+              color: isInCart ? '#FFF' : '#64748B',
+            }}>
+              {isInCart ? 'shopping_cart' : 'add_shopping_cart'}
+            </span>
+          </button>
         </div>
-
-        {/* Favorite Button (Absolute Top Right of the right container) */}
-        <button
-          className="btn-reset flex-center"
-          onClick={() => toggleFavorite(item.id)}
-          aria-label={item.isFavorite ? t('menu_favorite_remove') : t('menu_favorite_add')}
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: 'clamp(34px, 8.7rem, 48px)',
-            height: 'clamp(34px, 8.7rem, 48px)',
-            borderRadius: 12,
-            border: item.isFavorite ? '1.5px solid #EF4444' : '1px solid #BFDBFE',
-            backgroundColor: item.isFavorite ? '#EF4444' : '#EFF6FF',
-            transition: 'all 0.2s',
-          }}
-        >
-          <span className="icon-material" style={{
-            fontSize: 'clamp(19px, 4.8rem, 26px)',
-            color: item.isFavorite ? '#FFFFFF' : '#3B82F6',
-            fontVariationSettings: item.isFavorite ? "'FILL' 1" : "'FILL' 0",
-          }}>
-            favorite
-          </span>
-        </button>
       </div>
     </div>
   );
 });
 
-// Custom comparison function if needed, but shallow compare on item is usually enough 
-// if item references are stable. Wait, Zustand lists usually create new objects if nested 
-// properties change, so React.memo works out of the box.
 export default MenuCard;

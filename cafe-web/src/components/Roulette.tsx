@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from 'react-dom';
 import { useProfileStore } from '../stores/profile';
+import { useToastStore } from '../stores/toast';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { useOverlayClose } from '../hooks/useOverlayClose';
-import confetti from 'canvas-confetti';
+import { useT } from '../i18n/useT';
 
 // ─── Prizes with weighted probabilities ──────────────────────────────
 // Equal segments on wheel (8 × 45°), but weighted random selection
@@ -42,19 +43,12 @@ for (const p of PRIZES) {
 
 const NUM = PRIZES.length;
 const SLICE_DEG = 360 / NUM;
-const TOTAL_WEIGHT = PRIZES.reduce((s, p) => s + p.weight, 0);
-
-function pickWeightedIndex(): number {
-  let r = Math.random() * TOTAL_WEIGHT;
-  for (let i = 0; i < PRIZES.length; i++) {
-    r -= PRIZES[i].weight;
-    if (r <= 0) return i;
-  }
-  return PRIZES.length - 1;
-}
+// NOTE: the prize is picked SERVER-SIDE (Supabase RPC spin_roulette) with the
+// same weights as above — if you change weights here, update the RPC too.
 
 export default function Roulette() {
-  const { lastRouletteSpin, recordRouletteSpin, activePrize } = useProfileStore();
+  const t = useT();
+  const { lastRouletteSpin, spinRoulette, activePrize } = useProfileStore();
   const [spinning, setSpinning] = useState(false);
   const [wonPrize, setWonPrize] = useState<string | null>(null);
   const [showPrizesModal, setShowPrizesModal] = useState(false);
@@ -70,19 +64,36 @@ export default function Roulette() {
     }
   }, []);
 
-  const spinWheel = () => {
+  const spinWheel = async () => {
     if (spinning || !wheelRef.current || alreadySpun) return;
 
     setSpinning(true);
     setWonPrize(null);
 
-    const prizeIndex = pickWeightedIndex();
-    const prize = PRIZES[prizeIndex].label;
-
-    // Optimistically record the spin to prevent data loss if the user closes the app mid-spin
-    if (prize !== 'Ещё попытка') {
-      recordRouletteSpin(prize).catch(console.error);
+    // The server atomically checks the daily limit, picks the prize and
+    // records it BEFORE the animation starts — closing/refreshing the app
+    // mid-spin can't grant another attempt.
+    let prize: string;
+    try {
+      const result = await spinRoulette();
+      if (!result.allowed || !result.prize) {
+        // Daily spin already used (store state is synced inside spinRoulette)
+        setSpinning(false);
+        return;
+      }
+      prize = result.prize;
+    } catch (err) {
+      console.error('spin_roulette failed:', err);
+      setSpinning(false);
+      useToastStore.getState().showToast(t('err_network'), 'error');
+      return;
     }
+
+    if (!wheelRef.current) return;
+
+    // The wheel has duplicate segments for some prizes — pick one of them
+    const candidateIndexes = PRIZES.reduce<number[]>((acc, p, i) => (p.label === prize ? [...acc, i] : acc), []);
+    const prizeIndex = candidateIndexes[Math.floor(Math.random() * candidateIndexes.length)] ?? 0;
 
     // Random offset within the segment so the pointer doesn't always land dead-center
     const randomOffset = 3 + Math.random() * (SLICE_DEG - 6);
@@ -222,11 +233,19 @@ export default function Roulette() {
   const R = 150;
   const R_text = 112;
 
-  // ─── Responsive scale — wheel scales to fit screen width ────────────
+  // ─── Responsive scale — the VISIBLE disc fills width with 14px gutters ──
+  // The SVG footprint (SIZE + 40 = 410) has ~29px of transparent padding on
+  // each side around the visible backing circle (r = R_border_outer + 14).
+  // Scale by the visible diameter, not the footprint — otherwise the wheel
+  // looks small with huge side gaps. The transparent padding is pulled out
+  // of layout with a negative offset below.
+  const FOOTPRINT = SIZE + 40;
+  const VISIBLE_DIAMETER = (R_border_outer + 14) * 2; // 352 — what the eye sees
+  const PAD = (FOOTPRINT - VISIBLE_DIAMETER) / 2;     // 29 — transparent margin
+  const SIDE_GUTTER = 14;
   const getWheelScale = () => {
     const maxW = Math.min(window.innerWidth, 430);
-    const available = maxW - 24; // 12px padding each side
-    return Math.min(1, available / SIZE);
+    return (maxW - SIDE_GUTTER * 2) / VISIBLE_DIAMETER;
   };
   const [wheelScale, setWheelScale] = useState(getWheelScale);
 
@@ -320,35 +339,40 @@ export default function Roulette() {
     }}>
 
       {/* Warning tip */}
-      <div style={{ 
-        display: 'flex', alignItems: 'center', gap: 8, 
-        marginTop: 16, marginBottom: -8, padding: '10px 16px', 
-        backgroundColor: 'rgba(59, 130, 246, 0.08)', 
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        marginTop: 16, marginBottom: 12, padding: '10px 16px',
+        backgroundColor: 'rgba(59, 130, 246, 0.08)',
         borderRadius: 14, maxWidth: 340, width: '100%',
         border: '1px solid rgba(59, 130, 246, 0.2)'
       }}>
         <span className="icon-material" style={{ fontSize: 18, color: '#3B82F6', flexShrink: 0 }}>schedule</span>
         <span style={{ fontSize: 12, color: '#1D4ED8', fontWeight: 600, lineHeight: 1.3 }}>
-          Выигрыш действует 20 мин. Крутите барабан в кофейне!
+          {t('roulette_win_timer_info')}
         </span>
       </div>
 
       {/* Wheel Assembly */}
       <div
         style={{
+          // Layout box = the visible disc exactly. overflow:hidden clips the
+          // SVG's transparent padding (pulled out by the negative offset) so it
+          // can't overlap the warning tip above or the buttons below.
           position: 'relative',
-          width: (SIZE + 40) * wheelScale,
-          height: (SIZE + 40) * wheelScale,
-          marginBottom: 0,
+          width: VISIBLE_DIAMETER * wheelScale,
+          height: VISIBLE_DIAMETER * wheelScale,
+          overflow: 'hidden',
+          marginBottom: 16,
         }}
       >
         <div style={{
           transform: `scale(${wheelScale})`,
           transformOrigin: 'top left',
           position: 'absolute',
-          top: 0, left: 0,
-          width: SIZE + 40,
-          height: SIZE + 40,
+          top: -PAD * wheelScale,
+          left: -PAD * wheelScale,
+          width: FOOTPRINT,
+          height: FOOTPRINT,
         }}>
         {/* Static Dark Blue Backing Circle */}
         <svg
@@ -487,7 +511,7 @@ export default function Roulette() {
                 letterSpacing: '1px', textTransform: 'uppercase',
                 textAlign: 'center', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.3)',
               }}>
-                КРУТИМ
+                {t('roulette_spinning')}
               </span>
             </>
           ) : alreadySpun ? (
@@ -503,7 +527,7 @@ export default function Roulette() {
                 fontSize: 7, fontWeight: 700, color: '#94A3B8',
                 textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2,
               }}>
-                до сброса
+                {t('roulette_until_reset')}
               </span>
             </>
           ) : (
@@ -514,7 +538,7 @@ export default function Roulette() {
                 letterSpacing: '1px', textTransform: 'uppercase',
                 textAlign: 'center', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.3)',
               }}>
-                КРУТИТЬ
+                {t('roulette_spin')}
               </span>
               <span style={{ fontSize: 11, marginTop: 4 }}>🎰</span>
             </>
@@ -536,28 +560,28 @@ export default function Roulette() {
           width: '100%', maxWidth: 320, boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
         }}>
           <div style={{ fontSize: 20, fontWeight: 900, color: wonPrize === 'Банкрот' ? '#EF4444' : wonPrize === 'Ещё попытка' ? '#60A5FA' : '#22C55E', marginBottom: 4 }}>
-            {wonPrize === 'Банкрот' ? '😞 Банкрот!' : wonPrize === 'Ещё попытка' ? '🔄 Ещё попытка!' : '🎉 Поздравляем!'}
+            {wonPrize === 'Банкрот' ? t('roulette_bankrupt') : wonPrize === 'Ещё попытка' ? t('roulette_try_again') : t('roulette_congrats')}
           </div>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#FFF' }}>
-            {wonPrize === 'Банкрот' ? 'Повезёт в следующий раз' : wonPrize === 'Ещё попытка' ? 'Крутите колесо ещё раз!' : `Вы выиграли ${wonPrize}`}
+            {wonPrize === 'Банкрот' ? t('roulette_next_time') : wonPrize === 'Ещё попытка' ? t('roulette_spin_again') : `${t('roulette_you_won')} ${wonPrize}`}
           </div>
           {wonPrize !== 'Банкрот' && wonPrize !== 'Ещё попытка' && (
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 8 }}>
-              Покажите экран баристе для получения приза
+              {t('roulette_show_barista')}
             </div>
           )}
         </div>
       )}
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 340, marginTop: -8 }}>
+      <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 340, marginTop: 0 }}>
         <button
           onClick={() => setTimeout(() => setShowPrizesModal(true), 10)}
           className="btn-reset"
           style={{ flex: 1, padding: '14px 16px', borderRadius: 16, backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
           <span className="icon-material" style={{ fontSize: 20 }}>info</span>
-          Условия
+          {t('roulette_terms')}
         </button>
         <button
           onClick={() => setTimeout(() => setShowHistoryModal(true), 10)}
@@ -565,7 +589,7 @@ export default function Roulette() {
           style={{ flex: 1, padding: '14px 16px', borderRadius: 16, backgroundColor: '#1E293B', color: '#FFFFFF', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
           <span className="icon-material" style={{ fontSize: 20 }}>history</span>
-          Мои выигрыши
+          {t('roulette_my_winnings')}
         </button>
       </div>
 
@@ -582,6 +606,7 @@ export default function Roulette() {
 // Extracted outside Roulette to prevent re-creation on every parent re-render
 
 function PrizesModal({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const sheetRef = useSwipeToClose(onClose);
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);
@@ -594,7 +619,7 @@ function PrizesModal({ onClose }: { onClose: () => void }) {
         style={{ height: '70vh', backgroundColor: '#F9FAFC', width: '100%', maxWidth: 430, borderTopLeftRadius: 32, borderTopRightRadius: 32 }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 8px', flexShrink: 0 }}>
-          <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: '#1E293B' }}>Что можно выиграть?</h3>
+          <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: '#1E293B' }}>{t('roulette_what_to_win')}</h3>
           <button className="btn-reset flex-center" onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#E2E8F0' }}>
             <span className="icon-material" style={{ fontSize: 24, color: '#64748B' }}>close</span>
           </button>
@@ -602,16 +627,16 @@ function PrizesModal({ onClose }: { onClose: () => void }) {
 
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 16px 24px' }}>
           <div style={{ marginBottom: 24 }}>
-            <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1E293B', marginBottom: 12 }}>Правила игры</h4>
+            <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1E293B', marginBottom: 12 }}>{t('roulette_rules')}</h4>
             <ul style={{ paddingLeft: 20, margin: 0, color: '#475569', fontSize: 14, lineHeight: 1.5 }}>
-              <li style={{ marginBottom: 8 }}>Вы можете крутить Фортуну 1 раз в сутки.</li>
-              <li style={{ marginBottom: 8 }}>Для получения приза необходимо совершить любой заказ в кофейне (забрать приз без покупки нельзя).</li>
-              <li style={{ marginBottom: 8 }}>Выигрыш действителен ровно <strong>20 минут</strong> после прокрутки барабана.</li>
-              <li style={{ marginBottom: 8 }}>Покажите таймер баристе до истечения времени.</li>
-              <li>Призы не суммируются с другими акциями и скидками.</li>
+              <li style={{ marginBottom: 8 }}>{t('roulette_rule_1')}</li>
+              <li style={{ marginBottom: 8 }}>{t('roulette_rule_2')}</li>
+              <li style={{ marginBottom: 8 }} dangerouslySetInnerHTML={{ __html: t('roulette_rule_3') }} />
+              <li style={{ marginBottom: 8 }}>{t('roulette_rule_4')}</li>
+              <li>{t('roulette_rule_5')}</li>
             </ul>
           </div>
-          <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1E293B', marginBottom: 12 }}>Призы</h4>
+          <h4 style={{ fontSize: 16, fontWeight: 700, color: '#1E293B', marginBottom: 12 }}>{t('roulette_prizes_title')}</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {PRIZE_INFO.map((info) => (
               <div
@@ -668,6 +693,7 @@ function HistoryModal({ onClose, isPrizeActive, activePrize, prizeTimeLeft, form
   prizeTimeLeft: number;
   formatPrizeCountdown: (ms: number) => string;
 }) {
+  const t = useT();
   const sheetRef = useSwipeToClose(onClose);
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);
@@ -680,7 +706,7 @@ function HistoryModal({ onClose, isPrizeActive, activePrize, prizeTimeLeft, form
         style={{ maxHeight: '70vh', backgroundColor: '#FEF9F5', width: '100%', maxWidth: 430, borderTopLeftRadius: 32, borderTopRightRadius: 32 }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 8px', flexShrink: 0 }}>
-          <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: '#1E293B' }}>Мои выигрыши</h3>
+          <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: '#1E293B' }}>{t('roulette_my_winnings')}</h3>
           <button className="btn-reset flex-center" onClick={onClose} style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#E2E8F0' }}>
             <span className="icon-material" style={{ fontSize: 24, color: '#64748B' }}>close</span>
           </button>
@@ -702,14 +728,14 @@ function HistoryModal({ onClose, isPrizeActive, activePrize, prizeTimeLeft, form
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 800, opacity: 0.9, marginBottom: 4 }}>
-                  Активный приз
+                  {t('roulette_active_prize')}
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2, marginBottom: 8 }}>
                   {activePrize}
                 </div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', padding: '4px 10px', borderRadius: 12, fontSize: 13, fontWeight: 700 }}>
                   <span className="icon-material" style={{ fontSize: 16, marginRight: 6 }}>schedule</span>
-                  Истекает через: {formatPrizeCountdown(prizeTimeLeft)}
+                  {t('roulette_expires_in')}: {formatPrizeCountdown(prizeTimeLeft)}
                 </div>
               </div>
             </div>
@@ -720,10 +746,10 @@ function HistoryModal({ onClose, isPrizeActive, activePrize, prizeTimeLeft, form
             }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>🎁</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#475569', marginBottom: 8 }}>
-                У вас пока нет активных выигрышей
+                {t('roulette_no_active_prizes')}
               </div>
               <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 20, lineHeight: 1.4 }}>
-                Крутите колесо Фортуны каждый день, чтобы получать классные призы!
+                {t('roulette_spin_everyday')}
               </div>
             </div>
           )}

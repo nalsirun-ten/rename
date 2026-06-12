@@ -10,8 +10,10 @@ export { ru };
 // ─── Lazy-loaded languages ─────────────────────────────────────────────
 let enCache: Record<string, string> | null = null;
 let kgCache: Record<string, string> | null = null;
+let koCache: Record<string, string> | null = null;
 let enLoading: Promise<void> | null = null;
 let kgLoading: Promise<void> | null = null;
+let koLoading: Promise<void> | null = null;
 
 export async function loadLanguage(lang: Language): Promise<void> {
   if (lang === 'ru') return; // already loaded
@@ -37,13 +39,24 @@ export async function loadLanguage(lang: Language): Promise<void> {
       });
     return kgLoading;
   }
+  if (lang === 'ko') {
+    if (koCache) return;
+    if (koLoading) return koLoading;
+    koLoading = import('./ko')
+      .then(m => { koCache = m.default; })
+      .catch(err => {
+        console.error('Failed to load Korean translations:', err);
+        koLoading = null; // allow retry on next attempt
+      });
+    return koLoading;
+  }
 }
 
 export function getTranslation(key: TranslationKey, lang: Language): string {
   if (lang === 'ru') {
     return ru[key] ?? key;
   }
-  const cache = lang === 'en' ? enCache : kgCache;
+  const cache = lang === 'en' ? enCache : lang === 'kg' ? kgCache : koCache;
   if (cache) {
     return cache[key] ?? ru[key] ?? key;
   }

@@ -180,7 +180,7 @@ function StampsInfoModal({ onClose }: { onClose: () => void }) {
 // ─── StampsProgress ─────────────────────────────────────────────────
 
 export default function StampsProgress() {
-  const { stamps } = useProfileStore();
+  const stamps = useProfileStore(s => s.stamps);
   const filled = Math.min(stamps, TOTAL - 1);
   const isComplete = filled >= TOTAL - 1;
   const [showInfo, setShowInfo] = useState(false);

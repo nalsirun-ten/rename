@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import CountrySelectModal, { COUNTRIES } from '../components/CountrySelectModal';
+import CountrySelectModal from '../components/CountrySelectModal';
+import type { Country } from '../components/CountrySelectModal';
 import { useT } from '../i18n/useT';
+import QrCode from '../components/QrCode';
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
@@ -9,7 +11,8 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [telegramSessionId, setTelegramSessionId] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<Country>({ code: '+996', flag: '🇰🇬', name: '', format: 'XXX XXX XXX' });
   const [isCountryModalOpen, setIsCountryModalOpen] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const t = useT();
@@ -86,6 +89,99 @@ export default function LoginPage() {
     setPhone(formatted);
   };
 
+  const handleTelegramLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const sessionId = crypto.randomUUID();
+      
+      const { error: insertError } = await supabase.from('telegram_auth_requests').insert({
+        id: sessionId,
+      });
+
+      if (insertError) throw insertError;
+
+      setTelegramSessionId(sessionId);
+
+      const channel = supabase.channel(`telegram_auth_${sessionId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'telegram_auth_requests', filter: `id=eq.${sessionId}` },
+          async (payload) => {
+            const data = payload.new;
+            if (data.status === 'verified' && data.phone && data.temp_password) {
+              const { error: authError } = await supabase.auth.signInWithPassword({
+                phone: data.phone,
+                password: data.temp_password
+              });
+              
+              if (authError) {
+                setError(authError.message);
+              }
+              
+              await supabase.from('telegram_auth_requests').delete().eq('id', sessionId);
+              channel.unsubscribe();
+              setTelegramSessionId(null);
+              setLoading(false);
+            }
+          }
+        )
+        .subscribe();
+
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts++;
+        if (attempts > 150) {
+          clearInterval(interval);
+          setLoading(false);
+          setError("Время ожидания истекло. Попробуйте снова.");
+          return;
+        }
+
+        const { data } = await supabase.from('telegram_auth_requests').select('*').eq('id', sessionId).single();
+        if (data && data.status === 'verified' && data.phone && data.temp_password) {
+          clearInterval(interval);
+          
+          const { error: authError } = await supabase.auth.signInWithPassword({
+            phone: data.phone,
+            password: data.temp_password
+          });
+          
+          if (authError) {
+            setError(authError.message);
+          }
+          
+          await supabase.from('telegram_auth_requests').delete().eq('id', sessionId);
+          channel.unsubscribe();
+          setTelegramSessionId(null);
+          setLoading(false);
+        }
+      }, 2000);
+
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+      setTelegramSessionId(null);
+    }
+  };
+
+  const cancelTelegramAuth = () => {
+    setTelegramSessionId(null);
+    setLoading(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) setError(error.message);
+    setLoading(false);
+  };
+
   const handlePhoneLogin = async (channel: 'sms' | 'whatsapp') => {
     setLoading(true);
     setError(null);
@@ -105,7 +201,7 @@ export default function LoginPage() {
   const handleVerifyOtp = async () => {
     setLoading(true);
     setError(null);
-    const fullPhone = `${selectedCountry.code}${phone.replace(/\\D/g, '')}`;
+    const fullPhone = `${selectedCountry.code}${phone.replace(/\D/g, '')}`;
     const { error } = await supabase.auth.verifyOtp({
       phone: fullPhone,
       token,
@@ -148,6 +244,55 @@ export default function LoginPage() {
         )}
 
         {!otpSent ? (
+          telegramSessionId ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', padding: '16px 0' }}>
+              <div style={{ textAlign: 'center' }}>
+                <h3 style={{ fontSize: 20, fontWeight: 700, color: '#1E293B', marginBottom: 8 }}>Вход через Telegram</h3>
+                <p style={{ fontSize: 14, color: '#64748B' }}>Перейдите в Telegram, нажмите "Запустить" и поделитесь контактом.</p>
+              </div>
+
+              {/* QR Code for Desktop */}
+              <div style={{ display: typeof window !== 'undefined' && window.innerWidth > 640 ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', padding: '16px', backgroundColor: '#FFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <QrCode data={`https://t.me/MyGreenChickenBot?start=${telegramSessionId}`} size={160} iconSize={0} color="#000000" backgroundColor="#FFFFFF" />
+                </div>
+                <p style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>Отсканируйте камерой телефона</p>
+              </div>
+
+              {/* Deep link for Mobile */}
+              <a 
+                href={`tg://resolve?domain=MyGreenChickenBot&start=${telegramSessionId}`}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  borderRadius: '16px',
+                  backgroundColor: '#0088cc',
+                  color: '#FFF',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  display: typeof window !== 'undefined' && window.innerWidth <= 640 ? 'flex' : 'none',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textDecoration: 'none'
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.21-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .24z"/>
+                </svg>
+                Открыть Telegram
+              </a>
+
+              <div style={{ display: 'flex', alignItems: 'center', color: '#059669', backgroundColor: '#ECFDF5', padding: '8px 16px', borderRadius: '8px', fontSize: 14 }}>
+                <span className="icon-material" style={{ fontSize: 16, marginRight: 8, animation: 'spin 1s linear infinite' }}>refresh</span>
+                <span>Ожидаем подтверждения...</span>
+              </div>
+
+              <button onClick={cancelTelegramAuth} style={{ fontSize: 14, color: '#64748B', background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}>
+                Отмена
+              </button>
+            </div>
+          ) : (
           <>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>
@@ -222,7 +367,63 @@ export default function LoginPage() {
             >
               {t('login_get_code_whatsapp')}
             </button>
+
+            <div style={{ position: 'relative', margin: '24px 0', textAlign: 'center' }}>
+              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, borderTop: '1px solid #E2E8F0' }}></div>
+              <span style={{ position: 'relative', backgroundColor: '#FEF9F5', padding: '0 12px', color: '#94A3B8', fontSize: 14, fontWeight: 600 }}>ИЛИ</span>
+            </div>
+
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="btn-reset"
+              style={{
+                width: '100%',
+                padding: '16px',
+                borderRadius: 16,
+                backgroundColor: '#FFF',
+                border: '1px solid #E2E8F0',
+                color: '#1E293B',
+                fontSize: 16,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                opacity: loading ? 0.7 : 1,
+                marginBottom: 16,
+              }}
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: 24, height: 24 }} />
+              Войти через Google
+            </button>
+
+            <button
+              onClick={handleTelegramLogin}
+              disabled={loading}
+              className="btn-reset"
+              style={{
+                width: '100%',
+                padding: '16px',
+                borderRadius: 16,
+                backgroundColor: '#0088cc',
+                color: '#FFF',
+                fontSize: 16,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.21-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .24z" fill="currentColor"/>
+              </svg>
+              Войти через Telegram
+            </button>
           </>
+          )
         ) : (
           <>
             <div style={{ marginBottom: 32, textAlign: 'center' }}>

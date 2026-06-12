@@ -14,12 +14,14 @@ const LANGUAGES: { code: Language; flag: string }[] = [
   { code: 'ru', flag: '🇷🇺' },
   { code: 'en', flag: '🇬🇧' },
   { code: 'kg', flag: '🇰🇬' },
+  { code: 'ko', flag: '🇰🇷' },
 ];
 
 const LANG_NAMES: Record<Language, string> = {
   ru: 'Русский',
   en: 'English',
   kg: 'Кыргызча',
+  ko: '한국어',
 };
 
 export default function LanguageModal({ onClose }: Props) {

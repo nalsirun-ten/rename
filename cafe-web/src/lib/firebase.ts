@@ -22,6 +22,3 @@ export const messaging = async () => {
   }
   return null;
 };
-
-// VAPID KEY: From Firebase Console
-export const VAPID_KEY = 'BG1QzC4XRRD4TCtA6HbZ2WJsC77pwEUKUsPiK5cel4SQbAQgl-gtz1qPCoWLp9_eo4_1ByDHqNocWJnyNujcJyY';

@@ -20,11 +20,11 @@ function ratingColor(r: number): string {
 }
 
 const CATEGORIES: Array<{ id: string; nameKey: TranslationKey; image: string; borderColor: string }> = [
-  { id: 'c1', nameKey: 'review_category_cafe', image: '/categories/2.png', borderColor: '#D97706' },
-  { id: 'c2', nameKey: 'review_category_service', image: '/categories/5.png', borderColor: '#B45309' },
-  { id: 'c3', nameKey: 'review_category_cleanliness', image: '/categories/3.png', borderColor: '#16A34A' },
-  { id: 'c4', nameKey: 'review_category_atmosphere', image: '/categories/1.png', borderColor: '#F59E0B' },
-  { id: 'c5', nameKey: 'review_category_coffee_taste', image: '/categories/4.png', borderColor: '#2563EB' },
+  { id: 'c1', nameKey: 'review_category_cafe', image: '/categories/2.webp', borderColor: '#D97706' },
+  { id: 'c2', nameKey: 'review_category_service', image: '/categories/5.webp', borderColor: '#B45309' },
+  { id: 'c3', nameKey: 'review_category_cleanliness', image: '/categories/3.webp', borderColor: '#16A34A' },
+  { id: 'c4', nameKey: 'review_category_atmosphere', image: '/categories/1.webp', borderColor: '#F59E0B' },
+  { id: 'c5', nameKey: 'review_category_coffee_taste', image: '/categories/4.webp', borderColor: '#2563EB' },
 ];
 
 const STAFF = [
@@ -96,7 +96,7 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
       finalPrefix = `[${t(selectedTarget.item.nameKey)}] `;
       categoryName = t(selectedTarget.item.nameKey);
     } else if (selectedTarget.type === 'staff') {
-      finalPrefix = `[Сотрудник: ${selectedTarget.item.name}] `;
+      finalPrefix = `[${t('employee')}: ${selectedTarget.item.name}] `;
     }
     const finalText = finalPrefix + comment.trim();
     
@@ -106,7 +106,7 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
         text: finalText,
         branch_id: selectedBranch.id,
         user_id: userId || undefined,
-        guest_name: userId ? undefined : (name || 'Гость'),
+        guest_name: userId ? undefined : (name || t('guest')),
         guest_avatar: userId ? undefined : (photo || undefined),
         category: categoryName,
       });
@@ -163,7 +163,7 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 24px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {branches.length === 0 && <div style={{textAlign: 'center', padding: '20px', color: '#94A3B8'}}>Нет доступных филиалов</div>}
+                  {branches.length === 0 && <div style={{textAlign: 'center', padding: '20px', color: '#94A3B8'}}>{t('no_branches')}</div>}
                   {branches.map(b => (
                     <button key={b.id} className="btn-reset" onClick={() => { setSelectedBranch(b); setStep(2); }}
                       style={{

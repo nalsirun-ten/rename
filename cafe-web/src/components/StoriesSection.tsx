@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useStoriesStore, CAT_CFG } from '../stores/stories';
 import type { Story } from '../stores/stories';
 import { useT } from '../i18n/useT';
+import { thumbnailUrl } from '../utils/imageUrl';
 
 // ─── Styles ───────────────────────────────────────────────────────
 
@@ -89,9 +90,10 @@ function StoryItem({ story, isSeen, onTap }: { story: Story; isSeen: boolean; on
           }}>
             {hasImage ? (
               <img
-                src={story.imageUrl}
+                src={thumbnailUrl(story.imageUrl || '', 200)}
                 alt={story.title}
                 loading="lazy"
+                decoding="async"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => {
                   // Flutter: errorWidget → show emoji

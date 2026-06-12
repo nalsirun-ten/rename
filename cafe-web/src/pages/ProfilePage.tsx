@@ -9,9 +9,7 @@ import { useToastStore } from '../stores/toast';
 import { clearAuthData } from '../App';
 import { useLanguageStore } from '../stores/language';
 import { useNavigationStore } from '../stores/navigation';
-import { useMenuStore } from '../stores/menu';
 import { useReviewsStore } from '../stores/reviews';
-import { VAPID_KEY } from '../lib/firebase';
 
 // ─── Lazy modals — loaded in background after ProfilePage opens ───
 const AboutCafeModal = lazy(() => import('../components/AboutCafeModal'));
@@ -47,7 +45,6 @@ export default function ProfilePage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         useProfileStore.getState().fetchProfile(session.user.id);
-        useMenuStore.getState().fetchFavorites(session.user.id);
         useReviewsStore.getState().fetchLikedReviews(session.user.id);
       }
     });
@@ -56,6 +53,7 @@ export default function ProfilePage() {
   const getFlag = () => {
     if (language === 'en') return '🇬🇧';
     if (language === 'kg') return '🇰🇬';
+    if (language === 'ko') return '🇰🇷';
     return '🇷🇺';
   };
   const [isAboutCafeOpen, setIsAboutCafeOpen] = useState(false);
@@ -95,7 +93,7 @@ export default function ProfilePage() {
     } else {
       try {
         await navigator.clipboard.writeText(window.location.origin);
-        useToastStore.getState().showToast('Ссылка скопирована', 'success');
+        useToastStore.getState().showToast(t('link_copied' as any), 'success');
       } catch {
         useToastStore.getState().showToast(t('profile_share_text'), 'info', 5000);
       }
@@ -330,7 +328,7 @@ export default function ProfilePage() {
                 <span className="icon-material" style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', color: '#FFFFFF', fontVariationSettings: "'FILL' 1" }}>share</span>
               )}
             </div>
-            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>{isSharing ? t('loading') || 'Загрузка...' : t('profile_share_app')}</span>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 500, color: '#0F172A' }}>{isSharing ? t('loading') : t('profile_share_app')}</span>
             <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#CBD5E1' }}>chevron_right</span>
           </button>
 

@@ -47,17 +47,15 @@ export default function HomeHeader() {
 
           {/* Center: Flexible(child: FittedBox(scaleDown, child: Text)) */}
           <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-            <span style={{
-              fontFamily: "'Grand Hotel'",
-              fontSize: 'clamp(30px, 7.7rem, 42px)',
-              color: '#FFFFFF',
-              letterSpacing: 1,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}>
-              Green Chicken
-            </span>
+            <img
+              src="/logo_new.webp"
+              alt="Green Chicken"
+              style={{
+                height: 'clamp(40px, 10rem, 50px)',
+                objectFit: 'contain',
+                transform: 'translateY(-4px)',
+              }}
+            />
           </div>
 
           {/* Right: Expanded(child: Align(centerRight, child: IconButton)) */}

@@ -3,8 +3,8 @@ import { useNavigationStore } from '../stores/navigation';
 import BottomNavIcon from './BottomNavIcon';
 import { useT } from '../i18n/useT';
 
-const TAB_KEYS = ['nav_home', 'nav_branches', 'nav_menu', 'nav_profile'] as const;
-const TAB_ICONS = ['home', 'store', 'info', 'person'] as const;
+const TAB_KEYS = ['nav_home', 'nav_menu', 'nav_branches', 'nav_profile'] as const;
+const TAB_ICONS = ['local_cafe', 'delivery_dining', 'store', 'person'] as const;
 
 // 🔁 Exact copy of Flutter MainShell._buildBottomNav + _buildNavTab
 // Structure:
@@ -71,7 +71,9 @@ export default memo(function BottomNav() {
                 gap: isActive ? 8 : 0,
                 padding: '12px 14px',
                 borderRadius: 100,
-                transition: 'all 300ms cubic-bezier(0.4, 0.0, 0.2, 1)',
+                // Scoped transitions — `all` animated every inherited prop and
+                // forced extra style recalcs right when the tab content swaps.
+                transition: 'background 200ms cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0.0, 0.2, 1), gap 300ms cubic-bezier(0.4, 0.0, 0.2, 1)',
                 minWidth: 'clamp(48px, 12.3rem, 68px)',
                 minHeight: 'clamp(48px, 12.3rem, 68px)',
                 background: isActive ? '#3B82F6' : 'transparent',
@@ -95,7 +97,7 @@ export default memo(function BottomNav() {
                   fontFamily: "'Outfit', sans-serif",
                   color: isActive ? '#FFFFFF' : 'transparent',
                   whiteSpace: 'nowrap',
-                  transition: 'all 300ms cubic-bezier(0.4, 0.0, 0.2, 1)',
+                  transition: 'max-width 300ms cubic-bezier(0.4, 0.0, 0.2, 1), opacity 200ms cubic-bezier(0.4, 0.0, 0.2, 1)',
                   maxWidth: isActive ? 'clamp(80px, 20.5rem, 120px)' : 0,
                   opacity: isActive ? 1 : 0,
                   overflow: 'hidden',

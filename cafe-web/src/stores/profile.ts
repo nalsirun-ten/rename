@@ -46,9 +46,9 @@ interface ProfileState {
   photo?: string | null;
   lastRouletteSpin: string | null;
   activePrize: string | null;
-  updateProfile: (data: Partial<Omit<ProfileState, 'updateProfile' | 'fetchProfile' | 'requestPushPermission' | 'signOut' | 'recordRouletteSpin'>>, avatarFile?: File | null) => Promise<void>;
+  updateProfile: (data: Partial<Omit<ProfileState, 'updateProfile' | 'fetchProfile' | 'requestPushPermission' | 'signOut' | 'spinRoulette'>>, avatarFile?: File | null) => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
-  recordRouletteSpin: (prize: string) => Promise<void>;
+  spinRoulette: () => Promise<{ allowed: boolean; prize?: string }>;
   requestPushPermission: (vapidKey: string) => Promise<void>;
   signOut: () => Promise<void>;
   isLoading: boolean;
@@ -161,25 +161,27 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
   },
 
-  recordRouletteSpin: async (prize: string) => {
-    const { id } = get();
-    if (!id) return;
-    const now = new Date().toISOString();
-    
-    set({ lastRouletteSpin: now });
+  // The spin is decided and recorded SERVER-SIDE in one atomic transaction
+  // (RPC spin_roulette): the once-per-day check, the weighted prize pick and
+  // the write happen before the wheel even starts animating. Closing the app,
+  // pull-to-refresh or hardware back can no longer grant extra spins.
+  spinRoulette: async () => {
+    const { data, error } = await supabase.rpc('spin_roulette');
+    if (error || !data) throw error ?? new Error('spin_roulette failed');
 
-    const updates: any = { last_roulette_spin: now };
-    
-    if (prize !== 'Следующий раз повезет' && prize !== 'Банкрот') {
-      updates.active_prize = prize;
-      set({ activePrize: prize });
-    } else {
-      // Банкрот or no-prize: clear any previously active prize
-      updates.active_prize = null;
-      set({ activePrize: null });
+    const res = data as { allowed: boolean; prize?: string; last_spin?: string; reason?: string };
+
+    if (res.allowed && res.prize && res.prize !== 'Ещё попытка') {
+      set({
+        lastRouletteSpin: res.last_spin ? new Date(res.last_spin).toISOString() : new Date().toISOString(),
+        activePrize: res.prize === 'Банкрот' ? null : res.prize,
+      });
+    } else if (!res.allowed && res.last_spin) {
+      // Server says today's spin is used — sync the local state so the UI locks
+      set({ lastRouletteSpin: new Date(res.last_spin).toISOString() });
     }
 
-    await supabase.from('profiles').update(updates).eq('id', id);
+    return { allowed: res.allowed, prize: res.prize };
   },
 
   signOut: async () => {

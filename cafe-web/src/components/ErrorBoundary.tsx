@@ -1,4 +1,6 @@
 import React from 'react';
+import { useLanguageStore } from '../stores/language';
+import { getTranslation } from '../i18n/translations';
 
 interface Props {
   children: React.ReactNode;
@@ -64,7 +66,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               margin: '0 0 8px',
             }}
           >
-            Что-то пошло не так
+            {getTranslation('err_something_went_wrong', useLanguageStore.getState().language)}
           </h3>
           <p
             style={{
@@ -74,7 +76,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               lineHeight: 1.5,
             }}
           >
-            Попробуйте обновить страницу
+            {getTranslation('err_try_refreshing', useLanguageStore.getState().language)}
           </p>
           <button
             className="btn-reset"
@@ -88,7 +90,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               fontSize: 'clamp(15px, 3.8rem, 20px)',
             }}
           >
-            Попробовать снова
+            {getTranslation('try_again', useLanguageStore.getState().language)}
           </button>
         </div>
       );

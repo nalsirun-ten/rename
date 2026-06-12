@@ -6,8 +6,9 @@
 //     Stack: background image/gradient → gradient overlay → Tag + Title + Content
 //     Positioned date badge (48×48 circle) in cutout
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNewsStore, type NewsItem, getCategoryTag, getCategoryTagKey } from '../stores/news';
+import { thumbnailUrl } from '../utils/imageUrl';
 import NewsDetailModal from './NewsDetailModal';
 import { useT } from '../i18n/useT';
 
@@ -96,9 +97,10 @@ const NewsCard = React.memo(function NewsCard({
         {/* Background image or fallback */}
         {item.imageUrl ? (
           <img
-            src={item.imageUrl}
+            src={thumbnailUrl(item.imageUrl, 600)}
             alt={item.title}
             loading="lazy"
+            decoding="async"
             style={{
               position: 'absolute',
               inset: 0,
@@ -318,16 +320,39 @@ function SkeletonCard({ cardWidth, cardHeight }: { cardWidth: number; cardHeight
 }
 
 // ─── DotsIndicator ────────────────────────────────────────────────────
+// Subscribes to the carousel's scroll directly (rAF-throttled) and re-renders
+// ONLY itself. Keeping scrollPosition in NewsSection state re-rendered the
+// whole section on every scrolled pixel of the carousel.
 
 function DotsIndicator({
   count,
-  scrollPosition,
+  scrollElRef,
   itemWidth,
 }: {
   count: number;
-  scrollPosition: number;
+  scrollElRef: React.RefObject<HTMLDivElement | null>;
   itemWidth: number;
 }) {
+  const [scrollPosition, setScrollPosition] = useState(0);
+
+  useEffect(() => {
+    const el = scrollElRef.current;
+    if (!el) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setScrollPosition(el.scrollLeft);
+      });
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [scrollElRef]);
+
   if (count <= 1) return null;
 
   return (
@@ -367,7 +392,6 @@ export default function NewsSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollPosition, setScrollPosition] = useState(0);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -382,11 +406,6 @@ export default function NewsSection() {
     return () => ro.disconnect();
   }, []);
 
-  const handleScroll = useCallback(() => {
-    if (scrollRef.current) {
-      setScrollPosition(scrollRef.current.scrollLeft);
-    }
-  }, []);
 
   // Card dimensions (match Flutter logic)
   const cardW = Math.min(containerWidth * 0.84, 380);
@@ -447,7 +466,6 @@ export default function NewsSection() {
           <>
             <div
               ref={scrollRef}
-              onScroll={handleScroll}
               style={{
                 display: 'flex',
                 gap: 14,
@@ -478,7 +496,7 @@ export default function NewsSection() {
 
             {/* ── Dots indicator ── */}
             <div style={{ marginTop: 16 }}>
-              <DotsIndicator count={news.length} scrollPosition={scrollPosition} itemWidth={itemWidth} />
+              <DotsIndicator count={news.length} scrollElRef={scrollRef} itemWidth={itemWidth} />
             </div>
           </>
         ) : null}

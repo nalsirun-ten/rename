@@ -42,12 +42,15 @@ export default defineConfig({
             expiration: { maxEntries: 30, maxAgeSeconds: 31536000 },
           },
         }, {
-          // Supabase REST API — StaleWhileRevalidate: instant cache + background fetch
+          // Supabase REST API — NetworkFirst: always fresh when online,
+          // cache is only an offline fallback. StaleWhileRevalidate served
+          // up to hour-old menu/prices/stamps which looked like bugs.
           urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-          handler: 'StaleWhileRevalidate',
+          handler: 'NetworkFirst',
           options: {
             cacheName: 'supabase-api',
-            expiration: { maxEntries: 200, maxAgeSeconds: 3600 },
+            networkTimeoutSeconds: 4,
+            expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
           },
         }, {
           // Supabase Storage (images, avatars) — CacheFirst: rarely changes
@@ -94,6 +97,15 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            // Maps check MUST come before the generic 'react' check —
+            // '@vis.gl/react-google-maps' contains 'react' and would
+            // otherwise land in the eagerly-loaded vendor chunk.
+            if (id.includes('@vis.gl/react-google-maps')) {
+              return 'maps';
+            }
+            if (id.includes('firebase')) {
+              return 'firebase';
+            }
             if (id.includes('react') || id.includes('zustand')) {
               return 'vendor';
             }
@@ -102,9 +114,6 @@ export default defineConfig({
             }
             if (id.includes('qr-code-styling') || id.includes('qrcode')) {
               return 'qrcode';
-            }
-            if (id.includes('@vis.gl/react-google-maps')) {
-              return 'maps';
             }
           }
         },

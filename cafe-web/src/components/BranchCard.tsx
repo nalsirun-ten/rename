@@ -1,13 +1,17 @@
 import React from 'react';
 import { useBranchesStore, type Branch, isBranchOpenNow } from '../stores/branches';
 import { useT } from '../i18n/useT';
+import { thumbnailUrl } from '../utils/imageUrl';
 
 interface Props {
   branch: Branch;
 }
 
 const BranchCard = React.memo(function BranchCard({ branch }: Props) {
-  const { toggleSaved, openBranch } = useBranchesStore();
+  // Selector subscriptions (stable action refs) — subscribing to the whole
+  // store re-rendered every card on each search keystroke.
+  const toggleSaved = useBranchesStore(s => s.toggleSaved);
+  const openBranch = useBranchesStore(s => s.openBranch);
   const t = useT();
 
   const bishkekTimeString = new Date().toLocaleString("en-US", { timeZone: "Asia/Bishkek" });
@@ -75,9 +79,10 @@ const BranchCard = React.memo(function BranchCard({ branch }: Props) {
         {/* Right Side: Image */}
         <div style={{ flexShrink: 0, width: 'clamp(102px, 26rem, 146px)', height: 'clamp(102px, 26rem, 146px)', borderRadius: 12, overflow: 'hidden', backgroundColor: '#E2E8F0' }}>
           <img
-            src={branch.imageUrl}
+            src={thumbnailUrl(branch.imageUrl, 300)}
             alt={branch.title}
             loading="lazy"
+            decoding="async"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         </div>

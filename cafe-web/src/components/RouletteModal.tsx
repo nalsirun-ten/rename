@@ -3,12 +3,14 @@ import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { useOverlayClose } from '../hooks/useOverlayClose';
 import Roulette from './Roulette';
+import { useT } from '../i18n/useT';
 
 interface Props {
   onClose: () => void;
 }
 
 export default function RouletteModal({ onClose }: Props) {
+  const t = useT();
   const sheetRef = useSwipeToClose(onClose);
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);
@@ -28,7 +30,7 @@ export default function RouletteModal({ onClose }: Props) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 16px 8px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <h2 style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', fontWeight: 800, color: '#1E293B', margin: 0, marginRight: 8 }}>
-              Фортуна
+              {t('fortune')}
             </h2>
             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22C55E', boxShadow: '0 0 10px 2px rgba(34, 197, 94, 0.7)' }} />
           </div>
@@ -41,15 +43,15 @@ export default function RouletteModal({ onClose }: Props) {
           </button>
         </div>
 
-        {/* Roulette Content */}
+        {/* Roulette Content — mounted synchronously so the sheet has its final
+            height from the first frame: no empty flash, no resize jump. The
+            slide-in is a GPU transform, smooth despite the wheel's weight. */}
         <div style={{
           flex: 1, overflowY: 'auto',
           padding: 0,
           paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)'
         }}>
-          <div>
-            <Roulette />
-          </div>
+          <Roulette />
         </div>
       </div>
     </div>,

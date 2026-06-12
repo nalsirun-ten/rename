@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
-import { APIProvider } from '@vis.gl/react-google-maps';
 import MainShell from './components/MainShell';
 import LoginPage from './pages/LoginPage';
 import OfflineBanner from './components/OfflineBanner';
@@ -15,12 +14,10 @@ import { useNotificationStore } from './stores/notification';
 import { useNavigationStore } from './stores/navigation';
 import { useToastStore } from './stores/toast';
 import Toast from './components/Toast';
-import { useT } from './i18n/useT';
 import { useLanguageStore } from './stores/language';
-import { loadLanguage } from './i18n/translations';
-import { VAPID_KEY } from './lib/firebase';
-
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+import { loadLanguage, getTranslation } from './i18n/translations';
+import { VAPID_KEY } from './lib/pushConfig';
+import { useT } from './i18n/useT';
 
 const AUTH_DATA_LOADED = new Set<string>();
 
@@ -28,15 +25,13 @@ export function clearAuthData() {
   AUTH_DATA_LOADED.clear();
   useNotificationStore.setState({ notifications: [], unreadCount: 0, page: 1, hasMore: true });
   useReviewsStore.setState({ reviews: [], likedReviews: {} });
-  useMenuStore.setState({ favoriteIds: {} });
-  useProfileStore.setState({ id: null, name: 'Загрузка...', phone: '', visits: 0, stamps: 0, photo: null, loyaltyNumber: '000000', activePrize: null, lastRouletteSpin: null });
+  useProfileStore.setState({ id: null, name: getTranslation('loading', useLanguageStore.getState().language), phone: '', visits: 0, stamps: 0, photo: null, loyaltyNumber: '000000', activePrize: null, lastRouletteSpin: null });
 }
 
 function loadPrivateData(userId: string) {
   if (AUTH_DATA_LOADED.has(userId)) return;
   AUTH_DATA_LOADED.add(userId);
   useProfileStore.getState().fetchProfile(userId);
-  useMenuStore.getState().fetchFavorites(userId);
   useReviewsStore.getState().fetchLikedReviews(userId);
   useNotificationStore.getState().fetchNotifications(userId);
   // If the user already granted permissions previously, sync the token immediately 
@@ -82,9 +77,14 @@ export default function App() {
       }
     });
 
-    // Auto-sync token if user returns from OS settings after manually enabling permissions
+    // Auto-sync token if user returns from OS settings after manually enabling permissions.
+    // Throttled: app switching on mobile fires visibilitychange constantly, and each
+    // refetch used to update the profile store and re-render the whole shell.
+    let lastVisibilityRefresh = 0;
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        if (Date.now() - lastVisibilityRefresh < 30_000) return;
+        lastVisibilityRefresh = Date.now();
         // Re-fetch profile data when user returns to the app
         const profileId = useProfileStore.getState().id;
         if (profileId) {
@@ -161,22 +161,13 @@ export default function App() {
     return <LoginPage />;
   }
 
-  const appBody = (
+  // Google Maps APIProvider lives inside the lazy-loaded BranchesPage /
+  // BranchDetailModal — the Maps SDK is not fetched until a map is shown.
+  return (
     <>
       <OfflineBanner />
       <MainShell />
       <Toast />
     </>
   );
-
-  // Google Maps: load ONCE for the entire session — all map components share one instance.
-  if (GOOGLE_MAPS_API_KEY) {
-    return (
-      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-        {appBody}
-      </APIProvider>
-    );
-  }
-
-  return appBody;
 }

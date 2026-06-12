@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useBranchesStore, type FilterType } from '../stores/branches';
 import BranchCard from '../components/BranchCard';
 import BranchesMap from '../components/BranchesMap';
@@ -22,16 +22,12 @@ export default function BranchesPage() {
     searchQuery,
     filter,
     activeTab,
-    page,
     setSearchQuery,
     setFilter,
     setActiveTab,
-    fetchMoreBranches,
   } = useBranchesStore();
   const t = useT();
   const isLoading = useBranchesStore(s => s.isLoading);
-  const isLoadingMore = useBranchesStore(s => s.isLoadingMore);
-  const hasMore = useBranchesStore(s => s.hasMore);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
 
@@ -49,50 +45,42 @@ export default function BranchesPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isSortOpen]);
 
-  // Swipe logic
-  const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
-  const [touchEnd, setTouchEnd] = useState<{ x: number, y: number } | null>(null);
+  // Swipe to map — coordinates live in refs, NOT state: touchmove fires on
+  // every scroll pixel and setState there re-rendered the whole list dozens
+  // of times per second while scrolling.
+  const touchStartRef = useRef<{ x: number, y: number } | null>(null);
+  const touchEndRef = useRef<{ x: number, y: number } | null>(null);
   const minSwipeDistance = 50;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
-  };
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchEndRef.current = null;
+    touchStartRef.current = { x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY };
+  }, []);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
-  };
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    touchEndRef.current = { x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY };
+  }, []);
 
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distanceX = touchStart.x - touchEnd.x;
-    const distanceY = Math.abs(touchStart.y - touchEnd.y);
-    
+  const handleTouchEnd = useCallback(() => {
+    const start = touchStartRef.current;
+    const end = touchEndRef.current;
+    if (!start || !end) return;
+    const distanceX = start.x - end.x;
+    const distanceY = Math.abs(start.y - end.y);
     // Only switch if horizontal movement is greater than vertical movement and exceeds threshold
-    if (distanceX > minSwipeDistance && Math.abs(distanceX) > distanceY && activeTab === 'Списком') {
+    if (distanceX > minSwipeDistance && Math.abs(distanceX) > distanceY && useBranchesStore.getState().activeTab === 'Списком') {
       setActiveTab('Карта');
     }
-  };
+  }, [setActiveTab]);
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
-      fetchMoreBranches();
-    }
-  }, [fetchMoreBranches]);
-
-  const filteredBranches = branches.filter((b) => {
+  // All 3 branches are local — filtering and search are instant, no pagination
+  const filteredBranches = useMemo(() => branches.filter((b) => {
     if (filter !== 'Все' && b.type !== filter) return false;
     if (searchQuery && !b.title.toLowerCase().includes(searchQuery.toLowerCase()) && !b.address.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     return true;
-  });
-
-  // Only show items up to the current page (7 per page).
-  // Pagination works correctly even when IndexedDB cache holds extra items.
-  const VISIBLE_COUNT = page * 7;
-  const visibleBranches = filteredBranches.slice(0, VISIBLE_COUNT);
+  }), [branches, filter, searchQuery]);
 
 
   return (
@@ -168,7 +156,7 @@ export default function BranchesPage() {
           display: 'flex',
           flexDirection: 'column',
         }}>
-          <PullToRefresh onRefresh={handleRefresh} onScroll={handleScroll}>
+          <PullToRefresh onRefresh={handleRefresh}>
             <div 
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
@@ -350,23 +338,9 @@ export default function BranchesPage() {
                     </div>
                   ))
                 ) : filteredBranches.length > 0 ? (
-                  <>
-                    {visibleBranches.map((branch) => (
-                      <BranchCard key={branch.id} branch={branch} />
-                    ))}
-                    {/* Loading more indicator */}
-                    {isLoadingMore && (
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 0 24px 0', gap: 10 }}>
-                        <div className="skeleton-pulse" style={{ width: 28, height: 28, borderRadius: 14 }} />
-                        <span style={{ fontSize: 14, color: '#94A3B8', fontWeight: 500 }}>{t('loading')}</span>
-                      </div>
-                    )}
-                    {!hasMore && visibleBranches.length >= 7 && (
-                      <div style={{ textAlign: 'center', padding: '16px 0 24px 0', color: '#94A3B8', fontSize: 13, fontWeight: 500 }}>
-                        {t('branches_all_loaded')}
-                      </div>
-                    )}
-                  </>
+                  filteredBranches.map((branch) => (
+                    <BranchCard key={branch.id} branch={branch} />
+                  ))
                 ) : (
                   <div style={{ textAlign: 'center', padding: '40px 16px', color: '#94A3B8' }}>
                     <span className="icon-material" style={{ fontSize: 'clamp(48px, 12.3rem, 68px)', marginBottom: 12 }}>

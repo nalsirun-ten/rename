@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useBranchesStore } from '../stores/branches';
 import { useSettingsStore } from '../stores/settings';
-import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n/translations';
 import { useOverlayClose } from '../hooks/useOverlayClose';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
-
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 const WEEKDAY_KEYS: TranslationKey[] = [
   'weekday_mon', 'weekday_tue', 'weekday_wed', 'weekday_thu',
@@ -25,7 +24,6 @@ export default function BranchDetailModal() {
 
   const t = useT();
   const [isHoursExpanded, setIsHoursExpanded] = useState(false);
-  const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const phoneFormatted = get('contact_phone') || '+7 (999) 123-45-67';
@@ -45,11 +43,11 @@ export default function BranchDetailModal() {
   useEffect(() => {
     if (activeBranchId) {
       setIsHoursExpanded(false);
-      setIsRouteModalOpen(false);
       setCopied(false);
     }
   }, [activeBranchId]);
 
+  useLockBodyScroll(!!activeBranchId);
   const handleOverlay = useOverlayClose(closeBranch, !!activeBranchId);
   const sheetRef = useSwipeToClose(closeBranch);
 
@@ -73,120 +71,81 @@ export default function BranchDetailModal() {
   };
   const todayScheduleString = getScheduleString(todayIndex);
 
-  return (
-    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{
-      position: 'absolute',
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      zIndex: 1000,
+  return createPortal(
+    <div onClick={handleOverlay} style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 10000,
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'flex-end',
     }}>
-      {/* Main Bottom Sheet — auto‑sized to content, capped at 94vh */}
-      <div ref={sheetRef} className="rs-sheet sheet-base" style={{
-        backgroundColor: '#FFF',
-        display: 'flex',
-        flexDirection: 'column',
-        maxHeight: '85vh',
-        overflow: 'hidden',
-        position: 'relative',
-        width: '100%',
-      }}>
-        {/* Top Map Section */}
-        <div style={{ position: 'relative', height: '42vh', width: '100%', flexShrink: 0 }}>
-          {GOOGLE_MAPS_API_KEY ? (
-            <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-              <Map
-                defaultCenter={{ lat, lng }}
-                defaultZoom={14}
-                mapId="DEMO_MAP_ID"
-                id="detail-map"
-                colorScheme="LIGHT"
-                keyboardShortcuts={false}
-                disableDefaultUI={true}
-                gestureHandling="greedy"
-                style={{ width: '100%', height: '100%' }}
-              >
-                <AdvancedMarker position={{ lat, lng }}>
-                  {/* Custom Tear-drop Marker */}
-                  <div style={{
-                    width: 48, height: 48,
-                    backgroundColor: '#3b2f2f',
-                    borderRadius: '50% 50% 50% 0',
-                    transform: 'rotate(-45deg)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                    border: '2px solid #FFF',
-                    position: 'relative'
-                  }}>
-                    <span className="icon-material" style={{ 
-                      color: '#FFF', 
-                      fontSize: 24,
-                      transform: 'rotate(45deg)' 
-                    }}>
-                      local_cafe
-                    </span>
-                    
-                    {/* Small Green Dot at the top-right of the marker */}
-                    {branch.isOpen && (
-                      <div style={{
-                        position: 'absolute', top: -2, right: -2,
-                        width: 14, height: 14, backgroundColor: '#22C55E',
-                        borderRadius: '50%', border: '2px solid #FFF',
-                        transform: 'rotate(45deg)'
-                      }} />
-                    )}
-                  </div>
-                </AdvancedMarker>
-              </Map>
-            </APIProvider>
-          ) : (
-            <div style={{ width: '100%', height: '100%', backgroundColor: '#E2E8F0' }} />
-          )}
+      {/* Backdrop */}
+      <div
+        onClick={closeBranch}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+        }}
+      />
 
-          {/* Close Button Overlay */}
-          <button 
-            onClick={closeBranch}
-            className="btn-reset flex-center"
-            style={{ 
-              position: 'absolute', top: 16, right: 16, 
-              width: 36, height: 36, borderRadius: '50%', 
-              backgroundColor: '#1E293B', color: '#FFF',
-              zIndex: 10
-            }}
-          >
-            <span className="icon-material" style={{ fontSize: 20 }}>close</span>
-          </button>
+      {/* Main Bottom Sheet */}
+      <div ref={sheetRef} className="rs-sheet" style={{
+        position: 'relative',
+        backgroundColor: '#FFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: '70vh',
+        overflowY: 'auto',
+        overscrollBehavior: 'none',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.12)',
+      }}>
+        {/* Drag Handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px 0', position: 'sticky', top: 0, zIndex: 5, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
         </div>
 
-        {/* Scrollable Details Section */}
+        {/* Close Button */}
+        <button
+          onClick={closeBranch}
+          className="btn-reset flex-center"
+          style={{
+            position: 'absolute', top: 16, right: 16,
+            width: 36, height: 36, borderRadius: '50%',
+            backgroundColor: '#1E293B', color: '#FFF',
+            zIndex: 10
+          }}
+        >
+          <span className="icon-material" style={{ fontSize: 20 }}>close</span>
+        </button>
+
+        {/* Details Section */}
         <div style={{
-          height: 'calc(85vh - 42vh)', overflowY: 'auto',
           backgroundColor: '#FFF',
-          padding: '24px 16px',
+          padding: '16px 16px',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)'
         }}>
           {/* Header Row: Text Info + Image */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-            <div style={{ flex: 1, paddingRight: 16 }}>
-              <h2 style={{ fontSize: 'clamp(20px, 5.5rem, 26px)', fontWeight: 700, color: '#3B82F6', margin: 0, marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div style={{ flex: 1, paddingRight: 12 }}>
+              <h2 style={{ fontSize: 'clamp(18px, 4.6rem, 22px)', fontWeight: 700, color: '#3B82F6', margin: 0, marginBottom: 4 }}>
                 {branch.title}
               </h2>
-              <div style={{ fontSize: 'clamp(16px, 4.2rem, 18px)', color: '#1E293B', fontWeight: 600, marginBottom: 4 }}>
+              <div style={{ fontSize: 'clamp(14px, 3.6rem, 16px)', color: '#1E293B', fontWeight: 600, marginBottom: 2 }}>
                 {branch.address}
               </div>
-              <div style={{ fontSize: 'clamp(14px, 3.8rem, 16px)', color: '#1E293B', fontWeight: 500, marginBottom: 4 }}>
+              <div style={{ fontSize: 'clamp(13px, 3.3rem, 14px)', color: '#1E293B', fontWeight: 500, marginBottom: 2 }}>
                 {t('branch_city')}
               </div>
-              <div style={{ fontSize: 'clamp(14px, 3.8rem, 16px)', color: '#94A3B8', fontWeight: 500 }}>
+              <div style={{ fontSize: 'clamp(13px, 3.3rem, 14px)', color: '#94A3B8', fontWeight: 500 }}>
                 {branch.type}
               </div>
             </div>
-            
-            <div style={{ 
-              width: 110, height: 110, 
-              borderRadius: 20, 
+
+            <div style={{
+              width: 80, height: 80,
+              borderRadius: 16,
               backgroundColor: '#F1F5F9',
               overflow: 'hidden',
               flexShrink: 0
@@ -202,12 +161,12 @@ export default function BranchDetailModal() {
 
 
 
-          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 20px 0' }} />
+          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 12px 0' }} />
 
           {/* Today's Hours (Expandable) */}
-          <div 
+          <div
             onClick={() => setIsHoursExpanded(!isHoursExpanded)}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isHoursExpanded ? 16 : 20, cursor: 'pointer' }}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isHoursExpanded ? 10 : 12, cursor: 'pointer' }}
           >
             <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>
               {t('branch_today')} {todayScheduleString}
@@ -218,7 +177,7 @@ export default function BranchDetailModal() {
           </div>
 
           {isHoursExpanded && (
-            <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {WEEKDAY_KEYS.map((key, idx) => (
                 <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 15, color: idx === todayIndex ? '#1E293B' : '#64748B', fontWeight: idx === todayIndex ? 700 : 500 }}>
@@ -232,10 +191,10 @@ export default function BranchDetailModal() {
             </div>
           )}
 
-          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 20px 0' }} />
+          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 12px 0' }} />
 
           {/* Phone */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 16, fontWeight: 600, color: '#1E293B' }}>
                 {phoneFormatted}
@@ -270,118 +229,67 @@ export default function BranchDetailModal() {
             </div>
           </div>
 
-          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 20px 0' }} />
+          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 12px 0' }} />
 
-          {/* Route */}
-          <div 
-            onClick={() => setIsRouteModalOpen(true)}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-          >
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>
+          {/* Route buttons */}
+          <div style={{ marginBottom: 4 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#1E293B', marginBottom: 8 }}>
               {t('branch_route')}
             </div>
-            <span className="icon-material" style={{ color: '#1E293B', fontSize: 24 }}>route</span>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
+              <button
+                className="btn-reset"
+                onClick={() => window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`}
+                style={{
+                  flex: 1,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 8, padding: '12px 8px', borderRadius: 16,
+                  border: '1px solid #E2E8F0', backgroundColor: '#FFF'
+                }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src="/map2.png" alt="Google Maps" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#1E293B' }}>Google Maps</span>
+              </button>
+
+              <button
+                className="btn-reset"
+                onClick={() => window.location.href = `https://2gis.ru/routeSearch/rsType/car/to/${lng},${lat}`}
+                style={{
+                  flex: 1,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 8, padding: '12px 8px', borderRadius: 16,
+                  border: '1px solid #E2E8F0', backgroundColor: '#FFF'
+                }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src="/map1.png" alt="2GIS" style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 4 }} />
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#1E293B' }}>2GIS</span>
+              </button>
+
+              <button
+                className="btn-reset"
+                onClick={() => window.location.href = `https://yandex.ru/maps/?rtext=~${lat},${lng}`}
+                style={{
+                  flex: 1,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 8, padding: '12px 8px', borderRadius: 16,
+                  border: '1px solid #E2E8F0', backgroundColor: '#FFF'
+                }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src="/map3.png" alt="Yandex Maps" style={{ width: 24, height: 24, objectFit: 'contain' }} />
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#1E293B' }}>Yandex</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Nested Route Modal */}
-      {isRouteModalOpen && (
-        <RouteModal branch={branch} lat={lat} lng={lng} onClose={() => setIsRouteModalOpen(false)} t={t} />
-      )}
-    </div>
-  );
-}
-
-function RouteModal({ branch, lat, lng, onClose, t }: any) {
-  const handleOverlay = useOverlayClose(onClose);
-  const sheetRef = useSwipeToClose(onClose);
-
-  return (
-    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{
-      position: 'absolute',
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      zIndex: 1010,
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'flex-end',
-    }}>
-      <div ref={sheetRef} className="rs-sheet sheet-base" style={{
-        backgroundColor: '#FFF',
-        padding: '24px 16px',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-      }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-              <div>
-                <h3 style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', fontWeight: 800, color: '#1E293B', marginBottom: 4 }}>{t('branch_build_route')}</h3>
-                <span style={{ fontSize: 'clamp(14px, 3.6rem, 20px)', color: '#64748B', fontWeight: 500 }}>{branch.title}</span>
-              </div>
-              <button 
-                onClick={onClose}
-                className="btn-reset flex-center"
-                style={{ width: 'clamp(36px, 9.2rem, 50px)', height: 'clamp(36px, 9.2rem, 50px)', borderRadius: '50%', backgroundColor: '#E2E8F0' }}
-              >
-                <span className="icon-material" style={{ fontSize: 'clamp(20px, 5.1rem, 28px)', color: '#64748B', fontVariationSettings: "'FILL' 0" }}>close</span>
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <button 
-                className="btn-reset" 
-                onClick={() => window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
-                    <img src="/map2.png" alt="Google Maps" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                  </div>
-                  <span style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 700, color: '#1E293B' }}>Google Maps</span>
-                </div>
-                <span className="icon-material" style={{ color: '#94A3B8' }}>chevron_right</span>
-              </button>
-              
-              <button 
-                className="btn-reset" 
-                onClick={() => window.location.href = `https://2gis.ru/routeSearch/rsType/car/to/${lng},${lat}`}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
-                    <img src="/map1.png" alt="2GIS" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6 }} />
-                  </div>
-                  <span style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 700, color: '#1E293B' }}>2GIS</span>
-                </div>
-                <span className="icon-material" style={{ color: '#94A3B8' }}>chevron_right</span>
-              </button>
-
-              <button 
-                className="btn-reset" 
-                onClick={() => window.location.href = `https://yandex.ru/maps/?rtext=~${lat},${lng}`}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '16px', borderRadius: 16, border: '1px solid #E2E8F0', backgroundColor: '#FFF'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
-                    <img src="/map3.png" alt="Yandex Maps" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                  </div>
-                  <span style={{ fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 700, color: '#1E293B' }}>Яндекс.Карты</span>
-                </div>
-                <span className="icon-material" style={{ color: '#94A3B8' }}>chevron_right</span>
-              </button>
-            </div>
-      </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -33,9 +33,12 @@ export interface Branch {
   weeklySchedule?: WeeklySchedule;
 }
 
-// MOCK_BRANCHES removed, using Supabase
+// ─── Architecture: a cafe chain has a handful of branches (3 today), so we
+// load ALL of them with one simple query and keep them cached. Filtering,
+// search and the map all work off the same local list — zero network on
+// navigation. Stale-while-revalidate: after the TTL a background refresh
+// swaps in fresh data with no loading state.
 
-const PAGE_SIZE_BRANCHES = 7;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 function parseWorkingHours(working_hours?: string): [string, string] {
@@ -88,9 +91,6 @@ interface BranchesState {
   filter: FilterType;
   activeTab: TabType;
   activeBranchId: string | null;
-  page: number;
-  hasMore: boolean;
-  isLoadingMore: boolean;
   setSearchQuery: (query: string) => void;
   setFilter: (filter: FilterType) => void;
   setActiveTab: (tab: TabType) => void;
@@ -98,11 +98,13 @@ interface BranchesState {
   closeBranch: () => void;
   toggleSaved: (id: string) => void;
   fetchBranches: (force?: boolean) => Promise<void>;
-  fetchMoreBranches: () => Promise<void>;
   isLoading: boolean;
   lastFetchedAt: number;
   error: string | null;
 }
+
+// Deduplicates concurrent fetches (App startup + page mount + PTR)
+let inflightFetch: Promise<void> | null = null;
 
 export const useBranchesStore = create<BranchesState>()(
   persist(
@@ -116,9 +118,6 @@ export const useBranchesStore = create<BranchesState>()(
       filter: 'Все',
       activeTab: 'Списком',
       activeBranchId: null,
-      page: 1,
-      hasMore: true,
-      isLoadingMore: false,
   setSearchQuery: (query: string) => set({ searchQuery: query }),
   setFilter: (filter: FilterType) => set({ filter }),
   setActiveTab: (tab: TabType) => set({ activeTab: tab }),
@@ -141,91 +140,53 @@ export const useBranchesStore = create<BranchesState>()(
   },
 
   fetchBranches: async (force = false) => {
-    // Reset page to show only page 1 items (IndexedDB may hold more from previous session).
-    // Do NOT reset hasMore — preserve the last known value to avoid StrictMode re-triggers.
-    set({ page: 1 });
     // Skip if loaded AND recently fetched (unless forced)
     if (!force && get().branches.length > 0 && Date.now() - get().lastFetchedAt < CACHE_TTL_MS) return;
-    const hasExisting = get().branches.length > 0;
-    set({ isLoading: !hasExisting, hasMore: true });
-    const { data, error, count } = await retry(() => supabase
-      .from('branches')
-      .select('id, name, address, working_hours, type, image_url, is_active, latitude, longitude, weekly_schedule', { count: 'exact' })
-      .range(0, PAGE_SIZE_BRANCHES - 1));
-    if (data && !error) {
-      const newBranchesList = data.map((b: any) => {
-        const [openTime, closeTime] = parseWorkingHours(b.working_hours);
-        return {
-          id: b.id,
-          title: b.name,
-          address: b.address,
-          openTime,
-          closeTime,
-          type: ((b.type === 'takeaway' || b.type === 'Точка на вынос') ? 'Точка на вынос' : 'Кофейня') as BranchType,
-          imageUrl: b.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400',
-          isOpen: b.is_active !== false,
-          isSaved: !!get().savedBranchIds[b.id],
-          latitude: b.latitude ?? null,
-          longitude: b.longitude ?? null,
-          weeklySchedule: b.weekly_schedule || undefined,
-        };
-      });
+    if (inflightFetch) return inflightFetch;
 
-      const currentBranchesStr = JSON.stringify(get().branches);
-      const newBranchesStr = JSON.stringify(newBranchesList);
-      const newHasMore = (count ?? 0) > PAGE_SIZE_BRANCHES;
+    // Loading state only for the very first load — revalidation is invisible
+    if (get().branches.length === 0) set({ isLoading: true });
 
-      if (currentBranchesStr !== newBranchesStr || get().hasMore !== newHasMore) {
-        set({
-          branches: newBranchesList,
-          hasMore: newHasMore,
-          lastFetchedAt: Date.now(),
-        });
-      } else {
-        set({ lastFetchedAt: Date.now() });
+    inflightFetch = (async () => {
+      try {
+        const { data, error } = await retry(() => supabase
+          .from('branches')
+          .select('id, name, address, working_hours, type, image_url, is_active, latitude, longitude, weekly_schedule'));
+        if (data && !error) {
+          const newBranchesList = data.map((b: any) => {
+            const [openTime, closeTime] = parseWorkingHours(b.working_hours);
+            return {
+              id: b.id,
+              title: b.name,
+              address: b.address,
+              openTime,
+              closeTime,
+              type: ((b.type === 'takeaway' || b.type === 'Точка на вынос') ? 'Точка на вынос' : 'Кофейня') as BranchType,
+              imageUrl: b.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400',
+              isOpen: b.is_active !== false,
+              isSaved: !!get().savedBranchIds[b.id],
+              latitude: b.latitude ?? null,
+              longitude: b.longitude ?? null,
+              weeklySchedule: b.weekly_schedule || undefined,
+            };
+          });
+
+          // Skip the state update (and the re-render) when nothing changed
+          if (JSON.stringify(get().branches) !== JSON.stringify(newBranchesList)) {
+            set({ branches: newBranchesList, lastFetchedAt: Date.now() });
+          } else {
+            set({ lastFetchedAt: Date.now() });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching branches:', err);
+      } finally {
+        set({ isLoading: false, error: null });
+        inflightFetch = null;
       }
-    }
-    set({ isLoading: false, error: null });
-  },
+    })();
 
-  fetchMoreBranches: async () => {
-    const { page, branches, hasMore, isLoadingMore } = get();
-    if (!hasMore || isLoadingMore) return;
-    set({ isLoadingMore: true });
-    const nextPage = page + 1;
-    const from = page * PAGE_SIZE_BRANCHES;
-    const to = from + PAGE_SIZE_BRANCHES - 1;
-    const { data, error, count } = await retry(() => supabase
-      .from('branches')
-      .select('id, name, address, working_hours, type, image_url, is_active, latitude, longitude, weekly_schedule', { count: 'exact' })
-      .range(from, to));
-    if (data && !error) {
-      const newBranches = data.map((b: any) => {
-        const [openTime, closeTime] = parseWorkingHours(b.working_hours);
-        return {
-          id: b.id,
-          title: b.name,
-          address: b.address,
-          openTime,
-          closeTime,
-          type: ((b.type === 'takeaway' || b.type === 'Точка на вынос') ? 'Точка на вынос' : 'Кофейня') as BranchType,
-          imageUrl: b.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400',
-          isOpen: b.is_active !== false,
-          isSaved: !!get().savedBranchIds[b.id],
-          latitude: b.latitude ?? null,
-          longitude: b.longitude ?? null,
-          weeklySchedule: b.weekly_schedule || undefined,
-        };
-      });
-      set({
-        branches: [...branches, ...newBranches],
-        page: nextPage,
-        hasMore: (count ?? 0) > to + 1,
-        isLoadingMore: false,
-      });
-    } else {
-      set({ isLoadingMore: false });
-    }
+    return inflightFetch;
   },
     }),
     {

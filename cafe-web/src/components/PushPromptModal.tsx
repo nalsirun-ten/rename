@@ -4,7 +4,7 @@ import { useT } from '../i18n/useT';
 import { useProfileStore } from '../stores/profile';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useOverlayClose } from '../hooks/useOverlayClose';
-import { VAPID_KEY } from '../lib/firebase';
+import { VAPID_KEY } from '../lib/pushConfig';
 
 export default function PushPromptModal() {
   const t = useT();
@@ -93,10 +93,10 @@ export default function PushPromptModal() {
           </div>
           
           <h2 style={{ fontSize: 'clamp(22px, 5.6rem, 32px)', fontWeight: 800, color: '#1E293B', marginBottom: 12 }}>
-            Включить уведомления?
+            {t('push_prompt_title')}
           </h2>
           <p style={{ fontSize: 'clamp(15px, 3.8rem, 20px)', fontWeight: 500, color: '#64748B', lineHeight: 1.5, marginBottom: 32 }}>
-            Получайте персональные предложения, скидки и уведомления о бесплатном кофе прямо на экран вашего телефона.
+            {t('push_prompt_desc')}
           </p>
 
           <button 
@@ -109,7 +109,7 @@ export default function PushPromptModal() {
               marginBottom: 12
             }}
           >
-            Включить
+            {t('push_prompt_enable')}
           </button>
           
           <button 
@@ -121,7 +121,7 @@ export default function PushPromptModal() {
               fontSize: 'clamp(16px, 4rem, 22px)', fontWeight: 700
             }}
           >
-            Не сейчас
+            {t('push_prompt_later')}
           </button>
         </div>
       </div>

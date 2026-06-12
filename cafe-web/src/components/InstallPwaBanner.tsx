@@ -118,7 +118,7 @@ export default function InstallPwaBanner({ activeTab }: { activeTab?: number }) 
           className="btn-reset"
           onClick={handleDismiss}
           style={{ color: '#FFF', padding: 4 }}
-          aria-label="Закрыть"
+          aria-label={t('close')}
         >
           <span className="icon-material" style={{ fontSize: 22 }}>close</span>
         </button>

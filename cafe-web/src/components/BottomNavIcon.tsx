@@ -2,13 +2,13 @@
 // Flutter inactive → Material Symbols FILL=0 (outlined)
 // Flutter active   → Material Symbols FILL=1 (filled)
 //
-// Tab 0: Icons.home_outlined / Icons.home           → "home"
-// Tab 1: Icons.store_outlined / Icons.store          → "store"
-// Tab 2: Icons.info_outline   / Icons.info           → "info"
-// Tab 3: Icons.person_outline / Icons.person         → "person"
+// Tab 0: Icons.local_cafe                            → "local_cafe"
+// Tab 1: Icons.delivery_dining                       → "delivery_dining"
+// Tab 2: Icons.store                                  → "store"
+// Tab 3: Icons.person                                 → "person"
 
 interface Props {
-  name: 'home' | 'store' | 'info' | 'person';
+  name: 'home' | 'store' | 'info' | 'person' | 'delivery_dining' | 'local_cafe';
   filled?: boolean;
   color?: string;
 }

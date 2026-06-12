@@ -11,7 +11,10 @@ export default function LoyaltyCard() {
   const [showRoulette, setShowRoulette] = useState(false);
   const [showTier, setShowTier] = useState(false);
 
-  const { visits, loyaltyNumber } = useProfileStore();
+  // Narrow selectors — the whole-store subscription re-rendered the card
+  // (and its QR code subtree) on every profile change.
+  const visits = useProfileStore(s => s.visits);
+  const loyaltyNumber = useProfileStore(s => s.loyaltyNumber);
   const t = useT();
   const nextReward = getNextReward(visits);
   const previousMilestone = nextReward.visits > 20 ? nextReward.visits - 20 : 0;
@@ -36,7 +39,7 @@ export default function LoyaltyCard() {
             cursor: 'pointer'
           }}
         >
-          <QrCode data={loyaltyNumber} size={120} iconSize={28} />
+          <QrCode data={loyaltyNumber} size={120} iconSize={0} />
         </button>
 
         {/* Right column */}
@@ -95,7 +98,7 @@ export default function LoyaltyCard() {
               }}>
                 <img 
                   src="/wheel.webp" 
-                  alt="Фортуна" 
+                  alt={t('fortune')} 
                   style={{ 
                     position: 'absolute',
                     bottom: 0,
@@ -131,7 +134,7 @@ export default function LoyaltyCard() {
                     color: '#FFF',
                     textShadow: '0px 2px 4px rgba(0,0,0,0.8)'
                   }}>
-                    Фортуна
+                    {t('fortune')}
                   </span>
                 </div>
               </div>
