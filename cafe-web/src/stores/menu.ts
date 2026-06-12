@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { retry } from '../lib/retry';
 
+export interface ProductVariant {
+  name: string;
+  price: number;
+}
+
 export interface MenuItem {
   id: string;
   title: string;
@@ -9,6 +14,7 @@ export interface MenuItem {
   price: number;
   imageUrl: string;
   category: string;
+  variants?: ProductVariant[];
 }
 
 // ─── Architecture: the whole menu is ~170 rows (~10 KB gzipped), so we load
@@ -145,7 +151,7 @@ export const useMenuStore = create<MenuState>()((set, get) => ({
       try {
         const { data, error } = await retry(() => supabase
           .from('menu_items')
-          .select('id, name, description, price, image_url, category')
+          .select('id, name, description, price, image_url, category, variants')
           .order('created_at', { ascending: false }));
 
         if (data && !error) {
@@ -156,6 +162,7 @@ export const useMenuStore = create<MenuState>()((set, get) => ({
             price: item.price,
             imageUrl: item.image_url,
             category: normalizeCategory(item.category),
+            variants: Array.isArray(item.variants) && item.variants.length > 0 ? item.variants : undefined,
           }));
 
           const categoryCounts: Record<string, number> = {};

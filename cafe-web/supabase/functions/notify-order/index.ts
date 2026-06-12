@@ -52,7 +52,8 @@ serve(async (req) => {
     let itemsText = "";
     if (order.items && Array.isArray(order.items)) {
       order.items.forEach((item: any) => {
-        itemsText += `• ${item.name} x${item.quantity} - ${item.price * item.quantity} сом\n`;
+        const variantText = item.variant_name ? ` (${item.variant_name})` : '';
+        itemsText += `• ${item.name}${variantText} x${item.quantity} - ${item.price * item.quantity} сом\n`;
       });
     }
 

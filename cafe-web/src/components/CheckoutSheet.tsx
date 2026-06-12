@@ -188,6 +188,7 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
     price: item.price,
     quantity: item.quantity,
     image_url: item.imageUrl,
+    variant_name: item.variantName,
   }));
 
   // Save address to user_addresses after successful order

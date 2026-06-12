@@ -5,8 +5,10 @@ import { useOrderStore } from '../stores/orders';
 import MenuCard from '../components/MenuCard';
 import CategoryCard from '../components/CategoryCard';
 import PullToRefresh from '../components/PullToRefresh';
+import VariantSelectSheet from '../components/VariantSelectSheet';
 import { useT } from '../i18n/useT';
 import { useHardwareBack } from '../hooks/useHardwareBack';
+import type { MenuItem } from '../stores/menu';
 
 const CartSheet = lazy(() => import('../components/CartSheet'));
 const CheckoutSheet = lazy(() => import('../components/CheckoutSheet'));
@@ -110,6 +112,7 @@ export default function MenuPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAddressSheetOpen, setIsAddressSheetOpen] = useState(false);
+  const [variantSheetItem, setVariantSheetItem] = useState<MenuItem | null>(null);
   const activeDeliveryAddress = useOrderStore(s => s.activeDeliveryAddress);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -391,7 +394,7 @@ export default function MenuPage() {
                       paddingTop: 4,
                     }}>
                       {visibleItems.map((item) => (
-                        <MenuCard key={item.id} item={item} />
+                        <MenuCard key={item.id} item={item} onSelectVariants={setVariantSheetItem} />
                       ))}
                     </div>
                     {/* ── Footer — data is fully local, so there is no loading
@@ -469,6 +472,13 @@ export default function MenuPage() {
         <AddressSheet
           isOpen={isAddressSheetOpen}
           onClose={() => setIsAddressSheetOpen(false)}
+        />
+        
+        {/* ─── Variant Select Sheet ─── */}
+        <VariantSelectSheet 
+            isOpen={!!variantSheetItem} 
+            onClose={() => setVariantSheetItem(null)} 
+            item={variantSheetItem} 
         />
       </Suspense>
 

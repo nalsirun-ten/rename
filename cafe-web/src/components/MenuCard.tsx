@@ -6,24 +6,31 @@ import { thumbnailUrl } from '../utils/imageUrl';
 
 interface Props {
   item: MenuItem;
+  onSelectVariants?: (item: MenuItem) => void;
 }
 
-const MenuCard = React.memo(function MenuCard({ item }: Props) {
+const MenuCard = React.memo(function MenuCard({ item, onSelectVariants }: Props) {
   const t = useT();
-  // Subscribe ONLY to this item's cart state — avoids re-rendering all cards when one changes
-  const cartEntry = useCartStore(s => s.items.find(ci => ci.id === item.id));
-  const isInCart = !!cartEntry;
-  const cartQuantity = cartEntry?.quantity || 0;
+  // Sum up all variants of this item in the cart
+  const cartEntries = useCartStore(s => s.items.filter(ci => ci.id === item.id));
+  const cartQuantity = cartEntries.reduce((acc, ci) => acc + ci.quantity, 0);
+  const isInCart = cartQuantity > 0;
+  const hasVariants = item.variants && item.variants.length > 0;
 
   const handleCartAction = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    if (hasVariants && onSelectVariants) {
+      onSelectVariants(item);
+      return;
+    }
     const { addItem, incrementQuantity } = useCartStore.getState();
-    if (isInCart) {
-      incrementQuantity(item.id);
+    if (cartEntries.length > 0) {
+      // If there's no variant logic or just one default entry, increment it
+      incrementQuantity(cartEntries[0].cartItemId);
     } else {
       addItem({ id: item.id, title: item.title, price: item.price, imageUrl: item.imageUrl });
     }
-  }, [item.id, item.title, item.price, item.imageUrl, isInCart]);
+  }, [item, cartEntries, hasVariants, onSelectVariants]);
 
   const thumb = thumbnailUrl(item.imageUrl, 400);
 
@@ -114,6 +121,7 @@ const MenuCard = React.memo(function MenuCard({ item }: Props) {
         {/* Footer: Price + Add to cart */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 4 }}>
           <div style={{ fontSize: 'clamp(13px, 3.4rem, 17px)', fontWeight: 700, color: '#0F172A' }}>
+            {hasVariants && <span style={{ fontSize: 'clamp(10px, 2.6rem, 13px)', fontWeight: 600, color: '#64748B', marginRight: 2 }}>от</span>}
             {item.price} <span style={{ fontSize: 'clamp(10px, 2.6rem, 12px)', fontWeight: 600, color: '#64748B' }}>{t('som')}</span>
           </div>
           <button

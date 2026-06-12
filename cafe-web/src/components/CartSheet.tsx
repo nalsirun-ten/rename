@@ -93,7 +93,7 @@ const CartSheet = React.memo(function CartSheet({ isOpen, onClose, onCheckout }:
           ) : (
             items.map((item) => (
               <div
-                key={item.id}
+                key={item.cartItemId}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -123,7 +123,7 @@ const CartSheet = React.memo(function CartSheet({ isOpen, onClose, onCheckout }:
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.title}
+                    {item.title} {item.variantName ? <span style={{ color: '#64748B', fontWeight: 500 }}>({item.variantName})</span> : null}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>
                     {item.price * item.quantity} {t('som')}
@@ -134,7 +134,7 @@ const CartSheet = React.memo(function CartSheet({ isOpen, onClose, onCheckout }:
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                   <button
                     className="btn-reset flex-center"
-                    onClick={() => decrementQuantity(item.id)}
+                    onClick={() => decrementQuantity(item.cartItemId)}
                     style={{
                       width: 32,
                       height: 32,
@@ -152,7 +152,7 @@ const CartSheet = React.memo(function CartSheet({ isOpen, onClose, onCheckout }:
                   </span>
                   <button
                     className="btn-reset flex-center"
-                    onClick={() => incrementQuantity(item.id)}
+                    onClick={() => incrementQuantity(item.cartItemId)}
                     style={{
                       width: 32,
                       height: 32,
@@ -170,7 +170,7 @@ const CartSheet = React.memo(function CartSheet({ isOpen, onClose, onCheckout }:
                 {/* Remove */}
                 <button
                   className="btn-reset"
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => removeItem(item.cartItemId)}
                   style={{ padding: 4 }}
                 >
                   <span className="icon-material" style={{ fontSize: 20, color: '#EF4444' }}>

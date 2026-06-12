@@ -8,6 +8,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image_url?: string;
+  variant_name?: string;
 }
 
 export type DeliveryMethod = 'pickup' | 'delivery';
