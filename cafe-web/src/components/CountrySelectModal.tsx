@@ -38,7 +38,7 @@ export default function CountrySelectModal({ onSelect, onClose }: Props) {
   const handleOverlay = useOverlayClose(onClose);
 
   return createPortal(
-    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
+    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 10005 }}>
       <div 
         ref={sheetRef}
         className="rs-sheet sheet-base flex-col" 
