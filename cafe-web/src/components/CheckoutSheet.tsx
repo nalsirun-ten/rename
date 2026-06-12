@@ -274,8 +274,10 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
     );
   }
 
-  return createPortal(
-    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+  return (
+    <>
+      {createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       {/* Backdrop */}
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }} />
 
@@ -691,6 +693,18 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
       </div>
     </div>,
     document.body
+  )}
+      {isCountryModalOpen && (
+        <CountrySelectModal
+          onClose={() => setIsCountryModalOpen(false)}
+          onSelect={(country) => {
+            setSelectedCountry(country);
+            setIsCountryModalOpen(false);
+            setPhone('');
+          }}
+        />
+      )}
+    </>
   );
 });
 
