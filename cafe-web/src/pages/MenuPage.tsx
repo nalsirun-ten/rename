@@ -29,7 +29,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
   'Бургеры': '🍔',
   'Сэндвичи': '🥪',
   'Суши': '🍣',
-  'Роллы': '🍱',
+  'Японские роллы': '🍱',
   'Закуски': '🥨',
   'Гарниры': '🍚',
   'Соусы': '🧈',
@@ -65,7 +65,7 @@ const CATEGORY_IMAGE: Record<string, string> = {
   'Пицца':          '/category_images/cat_pizza_1781168865515-removebg-preview.webp',
   'Гарниры':        '/category_images/cat_side_dishes_1781174239254-removebg-preview.webp',
   'Супы':           '/category_images/cat_soups_1781168889004-removebg-preview.webp',
-  'Роллы':           '/category_images/cat_sushi_1781168847922-removebg-preview.webp',
+  'Японские роллы':           '/category_images/cat_sushi_1781168847922-removebg-preview.webp',
   'Десерты':        '/category_images/cat_desserts_1781177166251-removebg-preview.webp',
   'Соусы':          '/category_images/cat_sauces_1781176696071-removebg-preview.webp',
   'Кофе':           '/category_images/cat_coffee_1781186991524-removebg-preview.webp',
@@ -78,7 +78,7 @@ const CATEGORY_IMAGE: Record<string, string> = {
 // Clean distinct colors for each DUK category
 const CATEGORY_COLOR: Record<string, string> = {
   'Пицца':          '#E89040',
-  'Роллы':           '#5090E0',
+  'Японские роллы':           '#5090E0',
   'Курица':         '#E0B040',
   'Кимбап':         '#40C840',
   'Горячие блюда':  '#E04868',

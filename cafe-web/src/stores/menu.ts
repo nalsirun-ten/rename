@@ -51,7 +51,7 @@ const POPULAR_CATEGORIES = [
   'Бургеры',
   'Сэндвичи',
   'Суши',
-  'Роллы',
+  'Японские роллы',
   'Кимбап',
   'Закуски',
   'Гарниры',
@@ -80,7 +80,7 @@ const POPULAR_CATEGORIES = [
 
 /** Categories that always appear in the delivery page (with DUK images) */
 export const DUK_CATEGORIES = [
-  'Роллы',
+  'Японские роллы',
   'Курица',
   'Кимбап',
   'Горячие блюда',
@@ -100,7 +100,10 @@ export const DUK_CATEGORIES = [
 
 function normalizeCategory(dbCategory: string | null | undefined): string {
   if (!dbCategory) return '';
-  const trimmed = dbCategory.trim();
+  let trimmed = dbCategory.trim();
+  if (trimmed.toLowerCase() === 'роллы') {
+    trimmed = 'Японские роллы';
+  }
   const match = POPULAR_CATEGORIES.find(cat => cat.toLowerCase() === trimmed.toLowerCase());
   return match || trimmed;
 }
