@@ -2,36 +2,40 @@ import { useState } from 'react';
 import { useProfileStore } from '../stores/profile';
 import { useLanguageStore, type Language } from '../stores/language';
 import { useT } from '../i18n/useT';
-import { supabase } from '../lib/supabase';
 import { loadLanguage } from '../i18n/translations';
 
 export default function OnboardingModal() {
   const t = useT();
-  const { setOnboarded, updateProfile, id } = useProfileStore();
+  const { setOnboarded, updateProfile } = useProfileStore();
   const { language, setLanguage } = useLanguageStore();
   
   const [name, setName] = useState('');
   const [selectedLang, setSelectedLang] = useState<Language>(language);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const handleSubmit = async () => {
     if (!name.trim()) return; // Required
     setLoading(true);
-    
+    setError(false);
+
     // Save language
     await loadLanguage(selectedLang);
     setLanguage(selectedLang);
-    
-    // Update profile
-    await updateProfile({ name: name.trim() });
-    
-    // Also explicitly ensure it's saved to supabase just in case updateProfile doesn't handle full_name insert correctly for new users
-    if (id) {
-      await supabase.from('profiles').update({ full_name: name.trim() }).eq('id', id);
+
+    try {
+      // Update profile — saved via the update_own_profile RPC inside the store.
+      // Only mark onboarding complete once the name is actually persisted; if the
+      // save fails we keep the modal open so the user can retry (otherwise the name
+      // is lost and they get re-onboarded on the next install).
+      await updateProfile({ name: name.trim() });
+      setOnboarded(true);
+    } catch (e) {
+      console.error('Onboarding save failed', e);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
-    
-    setOnboarded(true);
-    setLoading(false);
   };
 
   return (
@@ -139,6 +143,12 @@ export default function OnboardingModal() {
             ))}
           </div>
         </div>
+
+        {error && (
+          <div style={{ padding: 12, backgroundColor: '#FEF2F2', color: '#EF4444', borderRadius: 12, marginBottom: 16, fontSize: 14, textAlign: 'center' }}>
+            {t('onboarding_save_error')}
+          </div>
+        )}
 
         <button
           onClick={handleSubmit}

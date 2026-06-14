@@ -143,7 +143,8 @@ const kg: Record<string, string> = {
   "branch_unsave": "Белгиден алып салуу",
   "branch_city": "Бишкек ш.",
   "branch_route": "Маршрут",
-  "branch_build_route": "Маршрут түзүү",
+  "branch_build_route": "Маршрут куруу",
+  "branch_detail_title": "Филиал",
   "profile_title": "Профиль",
   "profile_notifications": "Билдирүүлөр",
   "notifications_already_enabled": "Билдирүүлөр күйгүзүлгөн. Аларды өчүрүү үчүн түзмөгүңүздүн же браузериңиздин жөндөөлөрүнө өтүңүз.",
@@ -269,6 +270,10 @@ const kg: Record<string, string> = {
   "menu_add_to_cart": "Себетке кошуу",
   "menu_in_cart": "Себетте",
   "cart_title": "Себет",
+  "cart_upsell_title": "Буйрутмага кошуу",
+  "cart_upsell_subtitle": "Десерт же суусундук?",
+  "cart_upsell_dessert": "Десерт кошосузбу?",
+  "cart_upsell_drink_sauce": "Суусундук же соус?",
   "cart_empty": "Себет бош",
   "cart_total": "Жалпы",
   "cart_order": "Заказды жасоо",
@@ -281,6 +286,7 @@ const kg: Record<string, string> = {
   "onboarding_name_placeholder": "Атыңыз",
   "onboarding_language_label": "Тилди тандаңыз",
   "onboarding_save": "Сактоо жана улантуу",
+  "onboarding_save_error": "Сактоо мүмкүн болбоду. Интернетти текшерип, кайра аракет кылыңыз.",
   "login_otp_title": "Ырастоо",
   "instagram_go": "Instagram-га өтүү",
   "instagram_redirect": "Сиз биздин баракчага багытталасыз.",
@@ -381,6 +387,26 @@ const kg: Record<string, string> = {
   "roulette_spin_everyday": "Күн сайын рулетканы айлантыңыз",
   "menu_search_results": "Издөө натыйжалары",
   "link_copied": "Шилтеме көчүрүлдү",
+
+
+  "cat_rolls": "Жапон роллдору",
+  "cat_chicken": "Тоок эти",
+  "cat_kimbap": "Кимбап",
+  "cat_hot_dishes": "Ысык тамактар",
+  "cat_noodles": "Кесме",
+  "cat_side_dishes": "Гарнирлер",
+  "cat_soups": "Шорполор",
+  "cat_pizza": "Пицца",
+  "cat_drinks": "Суусундуктар",
+  "cat_coffee": "Кофе",
+  "cat_tea": "Чай",
+  "cat_lemonades": "Лимонаддар",
+  "cat_milkshakes": "Сүт коктейлдери",
+  "cat_smoothies": "Смузи",
+  "cat_desserts": "Десерттер",
+  "cat_sauces": "Соустар"
+
 };
+
 
 export default kg;

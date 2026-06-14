@@ -13,6 +13,7 @@ import { useProfileStore } from '../stores/profile';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { useOverlayClose } from '../hooks/useOverlayClose';
+import { useEntryAnimation } from '../hooks/useEntryAnimation';
 import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -342,6 +343,9 @@ export default function ReviewsSheet({ onClose }: Props) {
 
   useLockBodyScroll();
   const handleOverlayClick = useOverlayClose(onClose);
+  // Mount and lay out off-screen first, then start the slide-up animation
+  // on a clean frame — avoids the first-open stutter.
+  const animate = useEntryAnimation();
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -352,13 +356,13 @@ export default function ReviewsSheet({ onClose }: Props) {
 
   return createPortal(
     <div
-      className="rs-overlay overlay-base"
+      className={`overlay-base ${animate ? 'rs-overlay' : ''}`}
       onClick={handleOverlayClick}
       style={{ zIndex: 9999 }}
     >
       <div
         ref={sheetRef}
-        className="rs-sheet sheet-base flex-col"
+        className={`sheet-base flex-col ${animate ? 'rs-sheet' : ''}`}
         style={{
           maxHeight: '85vh',
           backgroundColor: '#F8F9FB',

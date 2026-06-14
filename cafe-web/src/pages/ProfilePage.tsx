@@ -20,9 +20,14 @@ const VacanciesModal = lazy(() => import('../components/VacanciesModal'));
 const ConfirmLogoutModal = lazy(() => import('../components/ConfirmLogoutModal'));
 
 export default function ProfilePage() {
-  const { name, phone, photo, visits, loyaltyNumber } = useProfileStore();
+  // Narrow selectors — whole-store subscriptions re-render the page on any
+  // profile change (stamps, visits, roulette…), not just the fields shown.
+  const name = useProfileStore((s) => s.name);
+  const phone = useProfileStore((s) => s.phone);
+  const photo = useProfileStore((s) => s.photo);
+  const loyaltyNumber = useProfileStore((s) => s.loyaltyNumber);
   const t = useT();
-  const { language } = useLanguageStore();
+  const language = useLanguageStore((s) => s.language);
   const activeTab = useNavigationStore((s) => s.activeTab);
   const lastProfileRefresh = useRef(0);
 
@@ -141,6 +146,7 @@ export default function ProfilePage() {
           <img
             src="/robot_3d.png"
             alt="Robot 3D"
+            decoding="async"
             style={{
               position: 'absolute',
               right: 0,
@@ -167,7 +173,7 @@ export default function ProfilePage() {
             overflow: 'hidden'
           }}>
             {photo ? (
-              <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={photo} alt={name} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               firstLetter
             )}

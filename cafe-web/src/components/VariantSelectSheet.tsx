@@ -94,7 +94,7 @@ export default function VariantSelectSheet({ isOpen, onClose, item }: Props) {
           {item.title}
         </h2>
         <p style={{ fontSize: 14, color: '#64748B', marginBottom: 20 }}>
-          Выберите вариант перед добавлением в корзину
+          {t('menu_select_variant')}
         </p>
 
         {/* Variants list */}
@@ -137,7 +137,7 @@ export default function VariantSelectSheet({ isOpen, onClose, item }: Props) {
             boxShadow: '0 4px 12px rgba(27, 94, 61, 0.2)',
           }}
         >
-          {t('add_to_cart')}
+          {t('menu_add_to_cart')}
         </button>
       </div>
     </div>,

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
 import { retry } from '../lib/retry';
+import { syncAppBadge } from '../lib/appBadge';
 
 export interface Notification {
   id: string;
@@ -41,24 +42,26 @@ export const useNotificationStore = create<NotificationState>()(
       hasMore: true,
       isLoadingMore: false,
       
-      setUnreadCount: (count: number) => set({ unreadCount: count }),
+      setUnreadCount: (count: number) => { set({ unreadCount: count }); syncAppBadge(count); },
 
       markAsRead: (notificationId: string) => {
         const nextRead = { ...get().readNotificationIds, [notificationId]: true };
-        const updated = get().notifications.map(n => 
+        const updated = get().notifications.map(n =>
           n.id === notificationId ? { ...n, is_active: false } : n
         );
+        const nextUnread = Math.max(0, get().unreadCount - 1);
         set({
           readNotificationIds: nextRead,
           notifications: updated,
-          unreadCount: Math.max(0, get().unreadCount - 1)
+          unreadCount: nextUnread
         });
+        syncAppBadge(nextUnread);
       },
 
       markAllAsRead: () => {
         const notifications = get().notifications;
         const nextRead = { ...get().readNotificationIds };
-        
+
         notifications.forEach(n => {
           if (n.is_active) {
             nextRead[n.id] = true;
@@ -72,6 +75,7 @@ export const useNotificationStore = create<NotificationState>()(
           notifications: updated,
           unreadCount: 0
         });
+        syncAppBadge(0);
       },
 
       fetchNotifications: async (userId: string) => {
@@ -81,6 +85,7 @@ export const useNotificationStore = create<NotificationState>()(
         if (!isStandalone) {
           // If in browser, do not show any notifications
           set({ notifications: [], unreadCount: 0, isLoading: false, hasMore: false });
+          syncAppBadge(0);
           return;
         }
 
@@ -93,15 +98,6 @@ export const useNotificationStore = create<NotificationState>()(
 
         set({ isLoading: true, page: 1 });
         try {
-          // 1. Fetch user's registration date
-          const { data: profile } = await retry(() => supabase
-            .from('profiles')
-            .select('created_at')
-            .eq('id', userId)
-            .single());
-
-          const userCreatedAt = profile?.created_at || new Date(0).toISOString();
-
           // Since read state is local, we must know which exact DB notifications are unread locally.
           const { data: allIdsData } = await retry(() => supabase
             .from('notifications')
@@ -138,11 +134,13 @@ export const useNotificationStore = create<NotificationState>()(
             unreadCountReal = allIdsData.filter((n: any) => !readIds[n.id]).length;
           }
 
-          set({ 
+          set({
             notifications: processedData,
             unreadCount: unreadCountReal,
             hasMore: (count ?? 0) > PAGE_SIZE_NOTIFICATIONS
           });
+          // Keep the home-screen icon badge in sync with the real unread count.
+          syncAppBadge(unreadCountReal);
         } catch (error) {
           console.error('Error fetching notifications:', error);
         } finally {
@@ -159,16 +157,8 @@ export const useNotificationStore = create<NotificationState>()(
         set({ isLoadingMore: true });
 
         let pwaInstalledAt = localStorage.getItem('pwaInstalledAt') || new Date().toISOString();
-        
+
         try {
-          const { data: profile } = await retry(() => supabase
-            .from('profiles')
-            .select('created_at')
-            .eq('id', userId)
-            .single());
-
-          const userCreatedAt = profile?.created_at || new Date(0).toISOString();
-
           const nextPage = page + 1;
           const from = page * PAGE_SIZE_NOTIFICATIONS;
           const to = from + PAGE_SIZE_NOTIFICATIONS - 1;

@@ -104,6 +104,25 @@ export const DUK_CATEGORIES = [
   'Соусы',
 ];
 
+export const CATEGORY_KEYS: Record<string, string> = {
+  'Японские роллы': 'cat_rolls',
+  'Курица': 'cat_chicken',
+  'Кимбап': 'cat_kimbap',
+  'Горячие блюда': 'cat_hot_dishes',
+  'Лапша': 'cat_noodles',
+  'Гарниры': 'cat_side_dishes',
+  'Супы': 'cat_soups',
+  'Пицца': 'cat_pizza',
+  'Напитки': 'cat_drinks',
+  'Кофе': 'cat_coffee',
+  'Чай': 'cat_tea',
+  'Лимонады': 'cat_lemonades',
+  'Молочные коктейли': 'cat_milkshakes',
+  'Смузи': 'cat_smoothies',
+  'Десерты': 'cat_desserts',
+  'Соусы': 'cat_sauces',
+};
+
 function normalizeCategory(dbCategory: string | null | undefined): string {
   if (!dbCategory) return '';
   let trimmed = dbCategory.trim();

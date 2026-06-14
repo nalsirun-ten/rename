@@ -144,6 +144,7 @@ const en: Record<string, string> = {
   "branch_city": "Bishkek",
   "branch_route": "Route",
   "branch_build_route": "Build route",
+  "branch_detail_title": "Branch",
   "profile_title": "Profile",
   "profile_notifications": "Notifications",
   "notifications_already_enabled": "Notifications are already enabled. To disable them, go to your device or browser settings.",
@@ -269,6 +270,10 @@ const en: Record<string, string> = {
   "menu_add_to_cart": "Add to cart",
   "menu_in_cart": "In cart",
   "cart_title": "Cart",
+  "cart_upsell_title": "Add to your order",
+  "cart_upsell_subtitle": "Dessert or a drink?",
+  "cart_upsell_dessert": "Add a dessert?",
+  "cart_upsell_drink_sauce": "A drink or a sauce?",
   "cart_empty": "Cart is empty",
   "cart_total": "Total",
   "cart_order": "Place order",
@@ -281,6 +286,7 @@ const en: Record<string, string> = {
   "onboarding_name_placeholder": "Your name",
   "onboarding_language_label": "Select language",
   "onboarding_save": "Save and continue",
+  "onboarding_save_error": "Couldn't save. Check your connection and try again.",
   "login_otp_title": "Verification",
   "instagram_go": "Go to Instagram",
   "instagram_redirect": "You will be redirected to our page.",
@@ -381,6 +387,26 @@ const en: Record<string, string> = {
   "roulette_spin_everyday": "Spin the roulette every day",
   "menu_search_results": "Search results",
   "link_copied": "Link copied",
+
+
+  "cat_rolls": "Japanese Rolls",
+  "cat_chicken": "Chicken",
+  "cat_kimbap": "Kimbap",
+  "cat_hot_dishes": "Hot Dishes",
+  "cat_noodles": "Noodles",
+  "cat_side_dishes": "Side Dishes",
+  "cat_soups": "Soups",
+  "cat_pizza": "Pizza",
+  "cat_drinks": "Drinks",
+  "cat_coffee": "Coffee",
+  "cat_tea": "Tea",
+  "cat_lemonades": "Lemonades",
+  "cat_milkshakes": "Milkshakes",
+  "cat_smoothies": "Smoothies",
+  "cat_desserts": "Desserts",
+  "cat_sauces": "Sauces"
+
 };
+
 
 export default en;

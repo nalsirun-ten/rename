@@ -11,6 +11,7 @@ import { useBranchesStore } from './stores/branches';
 import { useStoriesStore } from './stores/stories';
 import { useReviewsStore } from './stores/reviews';
 import { useNotificationStore } from './stores/notification';
+import { useOrderStore } from './stores/orders';
 import { useNavigationStore } from './stores/navigation';
 import { useToastStore } from './stores/toast';
 import Toast from './components/Toast';
@@ -25,6 +26,7 @@ export function clearAuthData() {
   AUTH_DATA_LOADED.clear();
   useNotificationStore.setState({ notifications: [], unreadCount: 0, page: 1, hasMore: true });
   useReviewsStore.setState({ reviews: [], likedReviews: {} });
+  useOrderStore.setState({ savedAddresses: [], activeDeliveryAddress: null });
   useProfileStore.setState({ id: null, name: getTranslation('loading', useLanguageStore.getState().language), phone: '', visits: 0, stamps: 0, photo: null, loyaltyNumber: '000000', activePrize: null, lastRouletteSpin: null });
 }
 
@@ -34,6 +36,9 @@ function loadPrivateData(userId: string) {
   useProfileStore.getState().fetchProfile(userId);
   useReviewsStore.getState().fetchLikedReviews(userId);
   useNotificationStore.getState().fetchNotifications(userId);
+  // Preload saved delivery addresses so the Delivery header shows the user's
+  // default address immediately instead of "Укажите адрес" until they tap it.
+  useOrderStore.getState().fetchAddresses();
   // If the user already granted permissions previously, sync the token immediately 
   // so it is saved to their new session profile.
   if ('Notification' in window && (Notification as any).permission === 'granted') {

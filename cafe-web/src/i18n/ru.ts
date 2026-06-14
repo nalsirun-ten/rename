@@ -144,6 +144,7 @@ const ru: Record<string, string> = {
   "branch_city": "г.Бишкек",
   "branch_route": "Маршрут",
   "branch_build_route": "Построить маршрут",
+  "branch_detail_title": "Филиал",
   "profile_title": "Профиль",
   "profile_notifications": "Уведомления",
   "notifications_already_enabled": "Уведомления уже включены. Чтобы отключить их, перейдите в настройки вашего устройства или браузера.",
@@ -281,6 +282,7 @@ const ru: Record<string, string> = {
   "onboarding_name_placeholder": "Ваше имя",
   "onboarding_language_label": "Выберите язык",
   "onboarding_save": "Сохранить и продолжить",
+  "onboarding_save_error": "Не удалось сохранить. Проверьте интернет и попробуйте ещё раз.",
   "login_otp_title": "Подтверждение",
   "instagram_go": "Перейти в Instagram",
   "instagram_redirect": "Вы будете перенаправлены на нашу страницу.",
@@ -291,7 +293,19 @@ const ru: Record<string, string> = {
   "pwa_ios_tap": "Нажмите",
   "pwa_ios_add": "и выберите «На экран 'Домой'»",
   "pwa_android_instruction": "Установите приложение на телефон",
+  "cart_upsell_title": "Добавить к заказу",
+  "cart_upsell_subtitle": "Десерт или напиток?",
+  "cart_upsell_dessert": "Десерт к заказу?",
+  "cart_upsell_drink_sauce": "Напиток или соус?",
   "pwa_install": "Установить",
+  "pwa_install_via_menu": "Откройте меню браузера (⋮) → «Установить приложение»",
+  "pwa_ios_onb_title": "Установите приложение",
+  "pwa_ios_onb_subtitle": "Добавьте Green Chicken на экран «Домой» — он будет открываться как обычное приложение: быстрее и удобнее.",
+  "pwa_ios_onb_step1": "Нажмите «Поделиться» в нижней панели Safari",
+  "pwa_ios_onb_step2": "Выберите «На экран „Домой“»",
+  "pwa_ios_onb_step3": "Нажмите «Добавить» — готово!",
+  "pwa_ios_onb_cta": "Понятно",
+  "pwa_ios_onb_share_hint": "Кнопка «Поделиться»",
 
   // ── Order / Checkout ──
   "order_checkout_title": "Оформление заказа",
@@ -385,6 +399,26 @@ const ru: Record<string, string> = {
   "roulette_spin_everyday": "Крутите рулетку каждый день",
   "menu_search_results": "Результаты поиска",
   "link_copied": "Ссылка скопирована",
+
+
+  "cat_rolls": "Японские роллы",
+  "cat_chicken": "Курица",
+  "cat_kimbap": "Кимбап",
+  "cat_hot_dishes": "Горячие блюда",
+  "cat_noodles": "Лапша",
+  "cat_side_dishes": "Гарниры",
+  "cat_soups": "Супы",
+  "cat_pizza": "Пицца",
+  "cat_drinks": "Напитки",
+  "cat_coffee": "Кофе",
+  "cat_tea": "Чай",
+  "cat_lemonades": "Лимонады",
+  "cat_milkshakes": "Молочные коктейли",
+  "cat_smoothies": "Смузи",
+  "cat_desserts": "Десерты",
+  "cat_sauces": "Соусы"
+
 };
+
 
 export default ru;

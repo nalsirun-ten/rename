@@ -1,6 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
+// Imported first so its beforeinstallprompt listener registers before React
+// mounts — the event often fires before the install banner is rendered.
+import './lib/pwaInstall';
 import App from './App';
 import './index.css';
 

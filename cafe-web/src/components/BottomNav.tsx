@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { useNavigationStore } from '../stores/navigation';
 import BottomNavIcon from './BottomNavIcon';
 import { useT } from '../i18n/useT';
@@ -20,17 +20,37 @@ const TAB_ICONS = ['local_cafe', 'delivery_dining', 'store', 'person'] as const;
 export default memo(function BottomNav() {
   const { activeTab, setActiveTab } = useNavigationStore();
   const t = useT();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Publish the nav's real rendered height (varies by device font size / safe
+  // area) as a CSS variable so floating elements like the Delivery cart bar can
+  // sit a guaranteed gap above it instead of relying on a hardcoded offset.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const apply = () => {
+      document.documentElement.style.setProperty('--bottom-nav-height', `${el.offsetHeight}px`);
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    window.addEventListener('resize', apply);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', apply);
+    };
+  }, []);
 
   return (
     <div
+      ref={wrapperRef}
       style={{
-        // ── SafeArea + Padding(bottom:8, left:16, right:16) ──
+        // ── SafeArea + Padding(bottom:16, left:16, right:16) ──
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        // Safe area for notched phones (env variable)
-        paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 16,
         paddingLeft: 16,
         paddingRight: 16,
         display: 'flex',

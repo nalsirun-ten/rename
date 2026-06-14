@@ -45,15 +45,14 @@ export default function HomeHeader() {
           {/* Left: Expanded(child: SizedBox()) */}
           <div style={{ flex: 1 }} />
 
-          {/* Center: Flexible(child: FittedBox(scaleDown, child: Text)) */}
           <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
             <img
-              src="/logo_new.webp"
+              src="/header_logo.png"
               alt="Green Chicken"
               style={{
                 height: 'clamp(40px, 10rem, 50px)',
                 objectFit: 'contain',
-                transform: 'translateY(-4px)',
+                transform: 'scale(1.3) translate(-8%, -3px)',
               }}
             />
           </div>

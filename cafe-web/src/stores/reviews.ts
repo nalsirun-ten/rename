@@ -96,6 +96,10 @@ export type FilterMode = 'most_liked' | 'recent' | 'positive' | 'negative';
 
 const REVIEWS_PAGE_SIZE = 5;
 
+// Debounce the search-triggered refetch — typing in the reviews search
+// otherwise fired a full query (plus a ratings scan) on every keystroke.
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 interface ReviewsState {
   reviews: Review[];
   likedReviews: Record<string, boolean>;
@@ -133,10 +137,17 @@ export const useReviewsStore = create<ReviewsState>()(
 
       setSearchQuery: (query: string) => {
         set({ searchQuery: query });
-        get().fetchReviews(true);
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+          searchDebounceTimer = null;
+          get().fetchReviews(true);
+        }, 350);
       },
 
       setFilter: (filter: FilterMode) => {
+        // Switching filter is an explicit tap — fetch immediately, and cancel
+        // any pending search-debounce so it can't fire a stale query after.
+        if (searchDebounceTimer) { clearTimeout(searchDebounceTimer); searchDebounceTimer = null; }
         set({ filter });
         get().fetchReviews(true);
       },

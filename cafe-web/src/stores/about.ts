@@ -7,9 +7,11 @@ export interface AboutSection {
   title_ru: string;
   title_en: string;
   title_kg: string;
+  title_ko?: string;
   content_ru: string;
   content_en: string;
   content_kg: string;
+  content_ko?: string;
   order_index: number;
 }
 

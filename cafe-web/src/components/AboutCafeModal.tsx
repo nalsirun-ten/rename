@@ -1,19 +1,16 @@
-import { useEffect } from 'react';
+
 import { createPortal } from 'react-dom';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { useOverlayClose } from '../hooks/useOverlayClose';
 import { useModalTheme } from '../hooks/useModalTheme';
 import { useT } from '../i18n/useT';
-import { useLanguageStore } from '../stores/language';
-import { useAboutStore } from '../stores/about';
-import { useSettingsStore } from '../stores/settings';
 
 interface Props {
   onClose: () => void;
 }
 
-const FALLBACK_SECTIONS = [
+const SECTIONS = [
   { icon: '📖', titleKey: 'about_cafe_section_story', contentKey: 'about_cafe_story_text' },
   { icon: '☕', titleKey: 'about_cafe_section_coffee', contentKey: 'about_cafe_coffee_text' },
   { icon: '💚', titleKey: 'about_cafe_section_philosophy', contentKey: 'about_cafe_philosophy_text' },
@@ -23,33 +20,10 @@ const FALLBACK_SECTIONS = [
 export default function AboutCafeModal({ onClose }: Props) {
   useModalTheme(true);
   const t = useT();
-  const { language: lang } = useLanguageStore();
   const sheetRef = useSwipeToClose(onClose);
-
-  const { sections, isLoading, fetchAbout } = useAboutStore();
-  const { get: getSetting, fetchSettings } = useSettingsStore();
-
-  useEffect(() => {
-    fetchAbout();
-    fetchSettings();
-  }, [fetchAbout, fetchSettings]);
 
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);
-
-  const introText = getSetting(`about_cafe_intro_${lang}`) || t('about_cafe_text');
-
-  const displaySections = sections.length > 0
-    ? sections.map((section) => ({
-        id: section.id,
-        title: `${section.icon} ${section[`title_${lang}` as keyof typeof section] as string}`,
-        content: section[`content_${lang}` as keyof typeof section] as string,
-      }))
-    : FALLBACK_SECTIONS.map((section, i) => ({
-        id: `fallback-${i}`,
-        title: t(section.titleKey),
-        content: t(section.contentKey),
-      }));
 
   return createPortal(
     <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
@@ -88,29 +62,23 @@ export default function AboutCafeModal({ onClose }: Props) {
           </h2>
 
           <p style={{ fontSize: 'clamp(16px, 4rem, 22px)', color: '#64748B', lineHeight: 1.6, marginBottom: 32 }}>
-            {introText}
+            {t('about_cafe_text')}
           </p>
 
-          {isLoading ? (
-            <div style={{ padding: '24px 0', textAlign: 'center', color: '#94A3B8' }}>
-              <span className="icon-material" style={{ animation: 'spin 1s linear infinite' }}>autorenew</span>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-              {displaySections.map((section) => (
-                <div key={section.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, paddingLeft: 12, borderLeft: '4px solid #1B5E3D' }}>
-                    <h3 style={{ fontSize: 'clamp(18px, 4.6rem, 26px)', fontWeight: 800, color: '#1E293B', margin: 0 }}>
-                      {section.title}
-                    </h3>
-                  </div>
-                  <p style={{ fontSize: 'clamp(15px, 3.8rem, 21px)', color: '#64748B', lineHeight: 1.6, margin: 0 }}>
-                    {section.content}
-                  </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            {SECTIONS.map((section, i) => (
+              <div key={i}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, paddingLeft: 12, borderLeft: '4px solid #1B5E3D' }}>
+                  <h3 style={{ fontSize: 'clamp(18px, 4.6rem, 26px)', fontWeight: 800, color: '#1E293B', margin: 0 }}>
+                    {section.icon} {t(section.titleKey).replace(/^[^ ]+ /, '')}
+                  </h3>
                 </div>
-              ))}
-            </div>
-          )}
+                <p style={{ fontSize: 'clamp(15px, 3.8rem, 21px)', color: '#64748B', lineHeight: 1.6, margin: 0 }}>
+                  {t(section.contentKey)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>,

@@ -10,14 +10,16 @@ const DEFAULT_CENTER = { lat: 42.8746, lng: 74.5698 };
 const DEFAULT_ZOOM = 12;
 
 // Map controller to handle panning without causing re-renders
-function MapController({ branchesWithCoords }: { branchesWithCoords: any[] }) {
+function MapController() {
   const map = useMap();
-  const { activeBranchId, branches } = useBranchesStore();
+  // Narrow selector — whole-store subscription re-ran this on every search
+  // keystroke; branches are read on demand inside the effect.
+  const activeBranchId = useBranchesStore(s => s.activeBranchId);
   useEffect(() => {
     if (!map) return;
-    
+
     if (activeBranchId) {
-      const branch = branches.find(b => b.id === activeBranchId);
+      const branch = useBranchesStore.getState().branches.find(b => b.id === activeBranchId);
       if (branch && branch.latitude && branch.longitude) {
         // Save previous state if not already saved
         if (!(window as any).__prevMapState) {
@@ -41,7 +43,7 @@ function MapController({ branchesWithCoords }: { branchesWithCoords: any[] }) {
         (window as any).__prevMapState = null;
       }
     }
-  }, [map, activeBranchId, branches]);
+  }, [map, activeBranchId]);
 
   return null;
 }
@@ -194,7 +196,7 @@ export default function BranchesMap() {
           gestureHandling="greedy"
           style={{ width: '100%', height: '100%' }}
         >
-          <MapController branchesWithCoords={branchesWithCoords} />
+          <MapController />
           {branchesWithCoords.map((branch) => (
             <BranchMarker
               key={branch.id}

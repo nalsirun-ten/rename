@@ -658,8 +658,12 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
             <div style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12 }}>
               {items.map((item) => (
                 <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, backgroundColor: '#F1F5F9' }}>
-                    <img src={thumbnailUrl(item.imageUrl, 100)} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, backgroundColor: item.imageUrl ? '#F1F5F9' : '#1B5E3D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {item.imageUrl ? (
+                      <img src={thumbnailUrl(item.imageUrl, 100)} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: 7, fontWeight: 700, color: '#FFFFFF', textAlign: 'center', lineHeight: 1.1, padding: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{item.title}</span>
+                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -679,7 +683,13 @@ const CheckoutSheet = React.memo(function CheckoutSheet({ isOpen, onClose, onOrd
         </div>
 
         {/* ─── Footer ─── */}
-        <div style={{ padding: '16px 20px 0 20px', borderTop: '1px solid #F1F5F9' }}>
+        <div style={{ 
+          padding: '16px 20px 0 20px', 
+          backgroundColor: '#FFFFFF',
+          borderTop: '1.5px solid #94A3B8',
+          boxShadow: '0 -12px 32px rgba(0,0,0,0.15)',
+          zIndex: 10
+        }}>
           {/* ─── Error ─── */}
           {orderError && (
             <div style={{

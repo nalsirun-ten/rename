@@ -7,6 +7,7 @@ import { useOverlayClose } from '../hooks/useOverlayClose';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useHardwareBack } from '../hooks/useHardwareBack';
 import { thumbnailUrl } from '../utils/imageUrl';
+import CartUpsell from './CartUpsell';
 
 interface Props {
   isOpen: boolean;
@@ -91,7 +92,8 @@ const CartSheet = React.memo(function CartSheet({ isOpen, onClose, onCheckout }:
               <p style={{ fontSize: 15, fontWeight: 500 }}>{t('cart_empty')}</p>
             </div>
           ) : (
-            items.map((item) => (
+            <>
+            {items.map((item) => (
               <div
                 key={item.cartItemId}
                 style={{
@@ -102,22 +104,44 @@ const CartSheet = React.memo(function CartSheet({ isOpen, onClose, onCheckout }:
                   borderBottom: '1px solid #F1F5F9',
                 }}
               >
-                {/* Image */}
+                {/* Image — fall back to a green name tile (same as MenuCard) when
+                    the item has no image, so items without a photo render
+                    consistently instead of a broken <img>. */}
                 <div style={{
                   width: 56,
                   height: 56,
                   borderRadius: 12,
                   overflow: 'hidden',
                   flexShrink: 0,
-                  backgroundColor: '#F1F5F9',
+                  backgroundColor: item.imageUrl ? '#F1F5F9' : '#1B5E3D',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}>
-                  <img
-                    src={thumbnailUrl(item.imageUrl, 200)}
-                    alt={item.title}
-                    loading="lazy"
-                    decoding="async"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
+                  {item.imageUrl ? (
+                    <img
+                      src={thumbnailUrl(item.imageUrl, 200)}
+                      alt={item.title}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <span style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      textAlign: 'center',
+                      lineHeight: 1.15,
+                      padding: 3,
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                    }}>
+                      {item.title}
+                    </span>
+                  )}
                 </div>
 
                 {/* Info */}
@@ -178,13 +202,22 @@ const CartSheet = React.memo(function CartSheet({ isOpen, onClose, onCheckout }:
                   </span>
                 </button>
               </div>
-            ))
+            ))}
+            {/* Smart add-ons at the very bottom — scrolls with the cart list */}
+            <CartUpsell />
+            </>
           )}
         </div>
 
         {/* Footer */}
         {items.length > 0 && (
-          <div style={{ padding: '16px 20px 0 20px' }}>
+          <div style={{
+            padding: '16px 20px 0 20px',
+            backgroundColor: '#FFFFFF',
+            borderTop: '1.5px solid #94A3B8',
+            boxShadow: '0 -12px 32px rgba(0,0,0,0.15)',
+            zIndex: 10
+          }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: 15, fontWeight: 500, color: '#64748B' }}>{t('cart_total')}</span>
               <span style={{ fontSize: 'clamp(18px, 4.6rem, 24px)', fontWeight: 700, color: '#1E293B' }}>

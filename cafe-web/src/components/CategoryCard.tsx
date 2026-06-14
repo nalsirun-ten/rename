@@ -3,7 +3,8 @@ import { useT } from '../i18n/useT';
 
 interface Props {
   name: string;
-  count: number;
+  /** null — counts are still loading; renders a pulsing placeholder */
+  count: number | null;
   emoji: string;
   color: string;
   imageUrl?: string;
@@ -54,13 +55,23 @@ const CategoryCard = React.memo(function CategoryCard({ name, count, emoji, imag
         }}>
           {name}
         </div>
-        <div style={{
-          fontSize: 'clamp(17px, 4.2rem, 21px)',
-          fontWeight: 600,
-          color: '#FFFFFF',
-        }}>
-          {count} {t('items_count')}
-        </div>
+        {count === null ? (
+          <div className="skeleton-pulse" style={{
+            width: 88,
+            height: 'clamp(17px, 4.2rem, 21px)',
+            borderRadius: 9,
+            backgroundColor: 'rgba(255,255,255,0.45)',
+            marginTop: 3,
+          }} />
+        ) : (
+          <div style={{
+            fontSize: 'clamp(17px, 4.2rem, 21px)',
+            fontWeight: 600,
+            color: '#FFFFFF',
+          }}>
+            {count} {t('items_count')}
+          </div>
+        )}
       </div>
 
       {/* ── Image / Emoji Overlay (Bottom Right) ── */}
@@ -68,6 +79,7 @@ const CategoryCard = React.memo(function CategoryCard({ name, count, emoji, imag
         <img
           src={imageUrl}
           alt={name}
+          decoding="async"
           style={{
             position: 'absolute',
             bottom: -offset,

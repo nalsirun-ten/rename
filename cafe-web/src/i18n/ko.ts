@@ -144,6 +144,7 @@ const ko: Record<string, string> = {
   "branch_city": "비슈케크",
   "branch_route": "길 찾기",
   "branch_build_route": "경로 보기",
+  "branch_detail_title": "지점",
   "profile_title": "프로필",
   "profile_notifications": "알림",
   "notifications_already_enabled": "알림이 이미 켜져 있습니다. 기기 또는 브라우저 설정에서 비활성화할 수 있습니다.",
@@ -269,6 +270,10 @@ const ko: Record<string, string> = {
   "menu_add_to_cart": "장바구니 담기",
   "menu_in_cart": "장바구니에 담김",
   "cart_title": "장바구니",
+  "cart_upsell_title": "주문에 추가",
+  "cart_upsell_subtitle": "디저트나 음료 어떠세요?",
+  "cart_upsell_dessert": "디저트 어떠세요?",
+  "cart_upsell_drink_sauce": "음료나 소스는요?",
   "cart_empty": "장바구니가 비어 있습니다",
   "cart_total": "총 금액",
   "cart_order": "주문하기",
@@ -281,6 +286,7 @@ const ko: Record<string, string> = {
   "onboarding_name_placeholder": "이름",
   "onboarding_language_label": "언어 선택",
   "onboarding_save": "저장 후 계속",
+  "onboarding_save_error": "저장하지 못했습니다. 연결을 확인하고 다시 시도하세요.",
   "login_otp_title": "본인 인증",
   "instagram_go": "Instagram 방문",
   "instagram_redirect": "우리 페이지로 이동합니다.",
@@ -379,6 +385,26 @@ const ko: Record<string, string> = {
   "roulette_spin_everyday": "매일 룰렛을 돌리세요",
   "menu_search_results": "검색 결과",
   "link_copied": "링크가 복사되었습니다",
+
+
+  "cat_rolls": "일본식 롤",
+  "cat_chicken": "치킨",
+  "cat_kimbap": "김밥",
+  "cat_hot_dishes": "따뜻한 요리",
+  "cat_noodles": "면",
+  "cat_side_dishes": "사이드 디시",
+  "cat_soups": "국/찌개",
+  "cat_pizza": "피자",
+  "cat_drinks": "음료",
+  "cat_coffee": "커피",
+  "cat_tea": "차",
+  "cat_lemonades": "레모네이드",
+  "cat_milkshakes": "밀크셰이크",
+  "cat_smoothies": "스무디",
+  "cat_desserts": "디저트",
+  "cat_sauces": "소스"
+
 };
+
 
 export default ko;

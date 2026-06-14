@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { useOverlayClose } from '../hooks/useOverlayClose';
+import { useEntryAnimation } from '../hooks/useEntryAnimation';
 import Roulette from './Roulette';
 import { useT } from '../i18n/useT';
 
@@ -14,12 +15,15 @@ export default function RouletteModal({ onClose }: Props) {
   const sheetRef = useSwipeToClose(onClose);
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);
+  // The wheel SVG is heavy to mount — let it lay out and paint while the
+  // sheet is still off-screen, then start the slide-up on a clean frame.
+  const animate = useEntryAnimation();
 
   return createPortal(
-    <div className="rs-overlay overlay-base" onClick={handleOverlay} style={{ zIndex: 9999 }}>
+    <div className={`overlay-base ${animate ? 'rs-overlay' : ''}`} onClick={handleOverlay} style={{ zIndex: 9999 }}>
       <div
         ref={sheetRef}
-        className="rs-sheet sheet-base flex-col"
+        className={`sheet-base flex-col ${animate ? 'rs-sheet' : ''}`}
         style={{
           maxHeight: '85vh',
           overflow: 'hidden',

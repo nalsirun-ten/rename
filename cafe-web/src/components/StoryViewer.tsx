@@ -223,7 +223,7 @@ export default function StoryViewer() {
         {/* Progress Bars */}
         <div style={{
           position: 'absolute',
-          top: 10,
+          top: 'calc(env(safe-area-inset-top, 0px) + 10px)',
           left: 10,
           right: 10,
           display: 'flex',
@@ -256,7 +256,7 @@ export default function StoryViewer() {
         {/* Header / Close button */}
         <div style={{
           position: 'absolute',
-          top: 24,
+          top: 'calc(env(safe-area-inset-top, 0px) + 24px)',
           left: 16,
           right: 16,
           display: 'flex',

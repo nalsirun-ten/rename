@@ -3,6 +3,7 @@ import { useBranchesStore, type FilterType } from '../stores/branches';
 import BranchCard from '../components/BranchCard';
 import BranchesMap from '../components/BranchesMap';
 import PullToRefresh from '../components/PullToRefresh';
+import { BranchCardSkeleton } from '../components/PageSkeletons';
 import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -17,19 +18,34 @@ const FILTER_LABEL_MAP: Record<string, TranslationKey> = {
 
 
 export default function BranchesPage() {
-  const {
-    branches,
-    searchQuery,
-    filter,
-    activeTab,
-    setSearchQuery,
-    setFilter,
-    setActiveTab,
-  } = useBranchesStore();
+  // Narrow selectors — the whole-store subscription re-rendered the page
+  // (and the whole list) on unrelated changes like activeBranchId.
+  const branches = useBranchesStore(s => s.branches);
+  const searchQuery = useBranchesStore(s => s.searchQuery);
+  const filter = useBranchesStore(s => s.filter);
+  const activeTab = useBranchesStore(s => s.activeTab);
+  const setSearchQuery = useBranchesStore(s => s.setSearchQuery);
+  const setFilter = useBranchesStore(s => s.setFilter);
+  const setActiveTab = useBranchesStore(s => s.setActiveTab);
   const t = useT();
   const isLoading = useBranchesStore(s => s.isLoading);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
+
+  // The Google Maps SDK is heavy — don't initialize it while the page is
+  // mounting and the tab crossfade is playing. Mount the (hidden) map either
+  // when the user opens the map tab, or in the background once the list has
+  // settled, whichever comes first.
+  const [mountMap, setMountMap] = useState(activeTab === 'Карта');
+  useEffect(() => {
+    if (mountMap) return;
+    if (activeTab === 'Карта') {
+      setMountMap(true);
+      return;
+    }
+    const id = setTimeout(() => setMountMap(true), 2500);
+    return () => clearTimeout(id);
+  }, [activeTab, mountMap]);
 
   const handleRefresh = async () => {
     await useBranchesStore.getState().fetchBranches(true);
@@ -291,51 +307,9 @@ export default function BranchesPage() {
               {/* List */}
               <div style={{ paddingBottom: 100 }}>
                 {isLoading && filteredBranches.length === 0 ? (
-                  // Skeletons — match BranchCard horizontal layout
+                  // Shared skeleton — geometry matches BranchCard 1:1
                   Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} style={{
-                      padding: '20px 0',
-                      margin: '0 12px',
-                      borderBottom: '1px solid #CBD5E1',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}>
-                      {/* Top row: text left + image right */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <div style={{ flex: 1, paddingRight: 12, minWidth: 0 }}>
-                          <div className="skeleton-pulse" style={{ width: '70%', height: 22, borderRadius: 11, marginBottom: 6 }} />
-                          <div className="skeleton-pulse" style={{ width: '85%', height: 18, borderRadius: 9, marginBottom: 10 }} />
-                          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4, gap: 8 }}>
-                            <div className="skeleton-pulse" style={{ width: 16, height: 16, borderRadius: 8 }} />
-                            <div className="skeleton-pulse" style={{ width: '45%', height: 14, borderRadius: 7 }} />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div className="skeleton-pulse" style={{ width: 16, height: 16, borderRadius: 8 }} />
-                            <div className="skeleton-pulse" style={{ width: '35%', height: 14, borderRadius: 7 }} />
-                          </div>
-                        </div>
-                        {/* Image placeholder */}
-                        <div className="skeleton-pulse" style={{
-                          flexShrink: 0,
-                          width: 'clamp(102px, 26rem, 146px)',
-                          height: 'clamp(102px, 26rem, 146px)',
-                          borderRadius: 12,
-                        }} />
-                      </div>
-                      {/* Bottom row: badge left + button right */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-                        <div className="skeleton-pulse" style={{
-                          width: 'clamp(100px, 25rem, 140px)',
-                          height: 'clamp(40px, 10.2rem, 60px)',
-                          borderRadius: 22,
-                        }} />
-                        <div className="skeleton-pulse" style={{
-                          width: 'clamp(40px, 10.2rem, 60px)',
-                          height: 'clamp(40px, 10.2rem, 60px)',
-                          borderRadius: 14,
-                        }} />
-                      </div>
-                    </div>
+                    <BranchCardSkeleton key={i} />
                   ))
                 ) : filteredBranches.length > 0 ? (
                   filteredBranches.map((branch) => (
@@ -363,7 +337,7 @@ export default function BranchesPage() {
           zIndex: activeTab === 'Карта' ? 10 : 0,
           backgroundColor: '#E5E3DF', // Google Maps default background color
         }}>
-          <BranchesMap />
+          {mountMap && <BranchesMap />}
         </div>
       </div>
     </div>

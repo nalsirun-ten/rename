@@ -9,6 +9,7 @@ import { useHardwareBack } from '../hooks/useHardwareBack';
 import { memo, useCallback, lazy, Suspense, useEffect, useState, startTransition } from 'react';
 import type { ComponentType } from 'react';
 import { BranchesPageSkeleton, MenuPageSkeleton, ProfilePageSkeleton } from './PageSkeletons';
+import { CATEGORY_IMAGE } from './categoryMeta';
 
 // ─── Lazy modals — loaded in background after app starts ───
 // User never sees a spinner because prefetch runs before they tap anything.
@@ -31,12 +32,25 @@ const STATIC_IMAGES = [
   '/categories/3.webp',
   '/categories/4.webp',
   '/categories/5.webp',
+  '/robot_3d.png', // profile card hero — decoded before the tab first opens
 ];
 
 function ImagePreloader() {
+  // Delivery-tab category images warm up AFTER startup paints (same delay
+  // as the chunk prefetch) so the first switch to the menu tab doesn't pay
+  // fetch+decode for 16 webp files mid-crossfade.
+  const [warmMenuImages, setWarmMenuImages] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setWarmMenuImages(true), 1500);
+    return () => clearTimeout(id);
+  }, []);
+
   return (
     <div aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
       {STATIC_IMAGES.map((src) => (
+        <img key={src} src={src} alt="" decoding="async" />
+      ))}
+      {warmMenuImages && Object.values(CATEGORY_IMAGE).map((src) => (
         <img key={src} src={src} alt="" decoding="async" />
       ))}
     </div>
@@ -91,11 +105,14 @@ export default function MainShell() {
   }, []);
 
   const handleBackToHome = useCallback(() => {
-    // If on delivery tab and inside a category, go back to categories
+    // Safety net: if on the delivery tab and inside a category/search, go back to
+    // the categories list instead of jumping home. This also covers the race
+    // where MenuPage's own back-entry wasn't on the history stack yet, which used
+    // to make hardware-back skip straight to home. Delivery is tab index 1.
     const tab = useNavigationStore.getState().activeTab;
-    if (tab === 2) {
+    if (tab === 1) {
       const menuState = useMenuStore.getState();
-      if (menuState.categoryFilter) {
+      if (menuState.categoryFilter || menuState.searchQuery) {
         menuState.setCategoryFilter('');
         menuState.setSearchQuery('');
         return;

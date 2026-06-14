@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, forwardRef } from 'react';
+import { useState, useRef, useCallback, useEffect, forwardRef } from 'react';
 import type { ReactNode } from 'react';
 
 interface PullToRefreshProps {
@@ -10,6 +10,11 @@ interface PullToRefreshProps {
 const MAX_PULL = 120;
 const THRESHOLD = 60;
 const MIN_SPINNER_MS = 500;
+// Hard cap on how long the spinner may stay up. iOS Safari can leave a fetch
+// pending forever on a brief network drop (Android/Chrome rejects it), which
+// left onRefresh's promise unsettled and the spinner spinning indefinitely.
+// This guarantees the spinner always clears no matter what onRefresh does.
+const MAX_REFRESH_MS = 8000;
 
 /**
  * Pull-to-refresh that NEVER interferes with the browser's native scroll.
@@ -30,7 +35,8 @@ const PullToRefresh = forwardRef<HTMLDivElement, PullToRefreshProps>(({ onRefres
   const indicatorRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLSpanElement>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Expose the ref to the parent if provided, otherwise use internal
   const handleRef = useCallback((node: HTMLDivElement) => {
     internalContainerRef.current = node;
@@ -76,11 +82,19 @@ const PullToRefresh = forwardRef<HTMLDivElement, PullToRefreshProps>(({ onRefres
 
   // ── Reset after refresh completes ──
   const resetPull = useCallback(() => {
+    if (refreshTimerRef.current) { clearTimeout(refreshTimerRef.current); refreshTimerRef.current = null; }
+    if (safetyTimerRef.current) { clearTimeout(safetyTimerRef.current); safetyTimerRef.current = null; }
     refreshingRef.current = false;
     setIsRefreshing(false);
     pullDistance.current = 0;
     hideIndicator();
   }, [hideIndicator]);
+
+  // Clear any pending timers on unmount so a late callback can't fire.
+  useEffect(() => () => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+  }, []);
 
   // ── Touch handlers (React synthetic, passive — zero scroll interference) ──
 
@@ -141,9 +155,17 @@ const PullToRefresh = forwardRef<HTMLDivElement, PullToRefreshProps>(({ onRefres
       pullDistance.current = THRESHOLD;
       updateIndicator(THRESHOLD, true);
 
+      // Safety net: force the spinner to clear after MAX_REFRESH_MS even if
+      // onRefresh never settles (e.g. an iOS fetch left hanging on a network drop).
+      if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = setTimeout(resetPull, MAX_REFRESH_MS);
+
       // Wait for onRefresh to complete to prevent animation stutter during heavy state updates
       const startTime = Date.now();
       const finishRefresh = () => {
+        // onRefresh settled in time — cancel the safety net and run the normal reset.
+        if (safetyTimerRef.current) { clearTimeout(safetyTimerRef.current); safetyTimerRef.current = null; }
+        if (!refreshingRef.current) return; // already reset by the safety net
         const elapsed = Date.now() - startTime;
         const remainingTime = Math.max(0, MIN_SPINNER_MS - elapsed);
         if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
@@ -164,6 +186,15 @@ const PullToRefresh = forwardRef<HTMLDivElement, PullToRefreshProps>(({ onRefres
     startY.current = 0;
   };
 
+  // iOS fires touchcancel (instead of touchend) when the system takes over a
+  // gesture mid-pull. Without this the partial-pull indicator would stay visible.
+  const handleTouchCancel = () => {
+    if (refreshingRef.current) return; // a refresh is already running — let it finish
+    startY.current = 0;
+    pullDistance.current = 0;
+    hideIndicator();
+  };
+
   return (
     <div
       ref={handleRef}
@@ -171,6 +202,7 @@ const PullToRefresh = forwardRef<HTMLDivElement, PullToRefreshProps>(({ onRefres
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
       style={{
         height: '100%',
         width: '100%',

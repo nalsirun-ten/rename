@@ -7,58 +7,95 @@ import { thumbnailUrl } from '../utils/imageUrl';
 interface Props {
   item: MenuItem;
   onSelectVariants?: (item: MenuItem) => void;
+  onClick?: (item: MenuItem) => void;
 }
 
-const MenuCard = React.memo(function MenuCard({ item, onSelectVariants }: Props) {
+const MenuCard = React.memo(function MenuCard({ item, onSelectVariants, onClick }: Props) {
   const t = useT();
-  // Sum up all variants of this item in the cart
-  const cartEntries = useCartStore(s => s.items.filter(ci => ci.id === item.id));
-  const cartQuantity = cartEntries.reduce((acc, ci) => acc + ci.quantity, 0);
+  // Sum up all variants of this item in the cart.
+  // The selector must return a primitive — returning a fresh array
+  // (e.g. items.filter(...)) makes zustand v5 re-render in a loop.
+  const cartQuantity = useCartStore(s =>
+    s.items.reduce((acc, ci) => (ci.id === item.id ? acc + ci.quantity : acc), 0)
+  );
   const isInCart = cartQuantity > 0;
   const hasVariants = item.variants && item.variants.length > 0;
 
-  const handleCartAction = useCallback((e: React.MouseEvent) => {
+  const handleDecrement = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { items: cartItems, decrementQuantity, removeItem } = useCartStore.getState();
+    const existing = cartItems.find(ci => ci.id === item.id);
+    if (existing) {
+      if (existing.quantity > 1) {
+        decrementQuantity(existing.cartItemId);
+      } else {
+        removeItem(existing.cartItemId);
+      }
+    }
+  }, [item.id]);
+
+  const handleIncrement = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (hasVariants && onSelectVariants) {
       onSelectVariants(item);
       return;
     }
-    const { addItem, incrementQuantity } = useCartStore.getState();
-    if (cartEntries.length > 0) {
-      // If there's no variant logic or just one default entry, increment it
-      incrementQuantity(cartEntries[0].cartItemId);
+    const { items: cartItems, addItem, incrementQuantity } = useCartStore.getState();
+    const existing = cartItems.find(ci => ci.id === item.id);
+    if (existing) {
+      incrementQuantity(existing.cartItemId);
     } else {
       addItem({ id: item.id, title: item.title, price: item.price, imageUrl: item.imageUrl });
     }
-  }, [item, cartEntries, hasVariants, onSelectVariants]);
+  }, [item, hasVariants, onSelectVariants]);
 
   const thumb = thumbnailUrl(item.imageUrl, 400);
 
   return (
-    <div style={{
-      backgroundColor: '#FFFFFF',
-      borderRadius: 16,
-      overflow: 'hidden',
-      boxShadow: '3px 4px 10px rgba(0,0,0,0.08)',
-      border: '1.5px solid #94A3B8',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
+    <div 
+      onClick={() => onClick?.(item)}
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        overflow: 'hidden',
+        boxShadow: '3px 4px 10px rgba(0,0,0,0.08)',
+        border: '1.5px solid #94A3B8',
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: onClick ? 'pointer' : 'default',
+      }}
+    >
       {/* Image */}
       <div style={{
         position: 'relative',
         width: '100%',
         aspectRatio: '1 / 1',
         overflow: 'hidden',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: item.imageUrl ? '#F1F5F9' : '#1B5E3D',
       }}>
-        <img
-          src={thumb}
-          alt={item.title}
-          loading="lazy"
-          decoding="async"
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
+        {item.imageUrl ? (
+          <img
+            src={thumb}
+            alt={item.title}
+            loading="lazy"
+            decoding="async"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 12,
+            textAlign: 'center',
+          }}>
+            <span style={{ fontSize: 'clamp(14px, 3.5vw, 16px)', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.3 }}>
+              {item.title}
+            </span>
+          </div>
+        )}
         {/* Cart quantity badge */}
         {isInCart && (
           <div style={{
@@ -119,30 +156,77 @@ const MenuCard = React.memo(function MenuCard({ item, onSelectVariants }: Props)
         </p>
 
         {/* Footer: Price + Add to cart */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 4 }}>
-          <div style={{ fontSize: 'clamp(13px, 3.4rem, 17px)', fontWeight: 700, color: '#0F172A' }}>
-            {hasVariants && <span style={{ fontSize: 'clamp(10px, 2.6rem, 13px)', fontWeight: 600, color: '#64748B', marginRight: 2 }}>от</span>}
-            {item.price} <span style={{ fontSize: 'clamp(10px, 2.6rem, 12px)', fontWeight: 600, color: '#64748B' }}>{t('som')}</span>
-          </div>
-          <button
-            className="btn-reset flex-center"
-            onClick={handleCartAction}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 10,
-              backgroundColor: isInCart ? '#1B5E3D' : '#F1F5F9',
-              transition: 'all 0.15s',
-              border: isInCart ? 'none' : '1px solid #E2E8F0',
-            }}
-          >
-            <span className="icon-material" style={{
-              fontSize: 18,
-              color: isInCart ? '#FFF' : '#64748B',
-            }}>
-              {isInCart ? 'shopping_cart' : 'add_shopping_cart'}
-            </span>
-          </button>
+        <div style={{ marginTop: 'auto', paddingTop: 8 }}>
+          {isInCart && !hasVariants ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: '#F1F5F9',
+                borderRadius: 12,
+                padding: '4px',
+                height: 44,
+                width: '100%',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className="btn-reset flex-center"
+                onClick={handleDecrement}
+                style={{
+                  width: 36, height: 36, borderRadius: 10, backgroundColor: '#FFFFFF',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)', color: '#0F172A',
+                }}
+              >
+                <span className="icon-material" style={{ fontSize: 20 }}>remove</span>
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', lineHeight: 1.1 }}>
+                  {cartQuantity}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', lineHeight: 1.1, marginTop: 2 }}>
+                  {item.price * cartQuantity} с
+                </span>
+              </div>
+              <button
+                className="btn-reset flex-center"
+                onClick={handleIncrement}
+                style={{
+                  width: 36, height: 36, borderRadius: 10, backgroundColor: '#1B5E3D', color: '#FFFFFF',
+                }}
+              >
+                <span className="icon-material" style={{ fontSize: 20 }}>add</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              className="btn-reset flex-center"
+              onClick={handleIncrement}
+              style={{
+                width: '100%',
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: '#1B5E3D',
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: 15,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span>
+                {hasVariants && <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.8, marginRight: 2 }}>от</span>}
+                {item.price} <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.8 }}>{t('som')}</span>
+              </span>
+              <span className="icon-material" style={{ fontSize: 20, opacity: 0.8 }}>
+                {hasVariants && isInCart ? 'shopping_cart' : 'add'}
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>

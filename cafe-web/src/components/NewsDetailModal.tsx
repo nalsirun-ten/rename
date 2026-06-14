@@ -11,6 +11,7 @@ import { getCategoryColor } from '../stores/news';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 import { useOverlayClose } from '../hooks/useOverlayClose';
+import { useEntryAnimation } from '../hooks/useEntryAnimation';
 import { useT } from '../i18n/useT';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -48,6 +49,9 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
 
   useLockBodyScroll();
   const handleOverlay = useOverlayClose(onClose);
+  // Mount and lay out off-screen first, then start the slide-up animation
+  // on a clean frame — avoids the first-open stutter.
+  const animate = useEntryAnimation();
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -59,10 +63,10 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
 
   return createPortal(
     <div
-      className="rs-overlay overlay-base"
+      className={`overlay-base ${animate ? 'rs-overlay' : ''}`}
       onClick={handleOverlay}
     >
-      <div ref={sheetRef} className="rs-sheet sheet-base flex-col" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+      <div ref={sheetRef} className={`sheet-base flex-col ${animate ? 'rs-sheet' : ''}`} style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
         {/* ── Header ── */}
         <div className="flex-between" style={{ padding: '16px 16px 8px', flexShrink: 0 }}>
@@ -99,6 +103,7 @@ export default function NewsDetailModal({ item, tag, onClose }: Props) {
                 src={item.imageUrl}
                 alt={item.title}
                 loading="lazy"
+                decoding="async"
                 style={{
                   width: '100%',
                   height: 'clamp(200px, 51rem, 280px)',

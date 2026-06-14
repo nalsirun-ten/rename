@@ -101,24 +101,30 @@ export default function BranchDetailModal() {
         overscrollBehavior: 'none',
         boxShadow: '0 -8px 40px rgba(0,0,0,0.12)',
       }}>
-        {/* Drag Handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px 0', position: 'sticky', top: 0, zIndex: 5, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
-        </div>
+        {/* Sticky Header Container */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
+          {/* Drag Handle */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px 0' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
+          </div>
 
-        {/* Close Button */}
-        <button
-          onClick={closeBranch}
-          className="btn-reset flex-center"
-          style={{
-            position: 'absolute', top: 16, right: 16,
-            width: 36, height: 36, borderRadius: '50%',
-            backgroundColor: '#1E293B', color: '#FFF',
-            zIndex: 10
-          }}
-        >
-          <span className="icon-material" style={{ fontSize: 20 }}>close</span>
-        </button>
+          {/* Header Row (Title + Close) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px 8px 16px' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: '#1E293B', margin: 0, textTransform: 'uppercase' }}>
+              {t('branch_detail_title')}
+            </h2>
+            <button
+              onClick={closeBranch}
+              className="btn-reset flex-center"
+              style={{
+                width: 36, height: 36, borderRadius: '50%',
+                backgroundColor: '#E2E8F0', color: '#475569'
+              }}
+            >
+              <span className="icon-material" style={{ fontSize: 20 }}>close</span>
+            </button>
+          </div>
+        </div>
 
         {/* Details Section */}
         <div style={{
@@ -166,20 +172,20 @@ export default function BranchDetailModal() {
           {/* Today's Hours (Expandable) */}
           <div
             onClick={() => setIsHoursExpanded(!isHoursExpanded)}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isHoursExpanded ? 10 : 12, cursor: 'pointer' }}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 36, marginBottom: isHoursExpanded ? 6 : 12, cursor: 'pointer' }}
           >
             <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>
               {t('branch_today')} {todayScheduleString}
             </div>
-            <span className="icon-material" style={{ color: '#1E293B', transition: 'transform 0.2s', transform: isHoursExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            <span className="icon-material" style={{ fontSize: 24, color: '#1E293B', transition: 'transform 0.2s', transform: isHoursExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
               expand_more
             </span>
           </div>
 
           {isHoursExpanded && (
-            <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 0 }}>
               {WEEKDAY_KEYS.map((key, idx) => (
-                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
                   <span style={{ fontSize: 15, color: idx === todayIndex ? '#1E293B' : '#64748B', fontWeight: idx === todayIndex ? 700 : 500 }}>
                     {t(key)}
                   </span>
@@ -191,7 +197,7 @@ export default function BranchDetailModal() {
             </div>
           )}
 
-          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 12px 0' }} />
+          <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '0 0 16px 0' }} />
 
           {/* Phone */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>

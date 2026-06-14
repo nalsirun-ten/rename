@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSwipeToClose } from '../hooks/useSwipeToClose';
 import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
+import { useEntryAnimation } from '../hooks/useEntryAnimation';
 import { useHardwareBack } from '../hooks/useHardwareBack';
 import { useBranchesStore } from '../stores/branches';
 import { useReviewsStore } from '../stores/reviews';
@@ -59,6 +60,11 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
   const { id: userId, name, photo } = useProfileStore();
 
   useLockBodyScroll(isOpen);
+
+  // First paint after the visibility flip is expensive (branch/category
+  // images, full sheet raster) — let it happen off-screen, then start the
+  // slide-up animation on a clean frame.
+  const animate = useEntryAnimation(isOpen);
 
   // Hardware back button support for nested steps
   useHardwareBack(onClose, isOpen); // Base modal close
@@ -130,8 +136,8 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
         }
       `}</style>
       {sent && isOpen ? (
-        <div className="overlay-base" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 9999, animation: 'rm-overlay-in .25s ease-out', opacity: 1 }}>
-          <div ref={sheetRef} className="sheet-base flex-col" style={{ padding: '48px 16px 40px', alignItems: 'center', animation: 'rm-sheet-up .35s cubic-bezier(.32,.72,0,1)' }}>
+        <div className="overlay-base" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 9999, animation: animate ? 'rm-overlay-in .25s ease-out' : undefined, opacity: animate ? 1 : 0 }}>
+          <div ref={sheetRef} className="sheet-base flex-col" style={{ padding: '48px 16px 40px', alignItems: 'center', animation: animate ? 'rm-sheet-up .35s cubic-bezier(.32,.72,0,1)' : undefined, transform: animate ? 'translateY(0) translateZ(0)' : 'translateY(100%) translateZ(0)' }}>
             <div className="flex-center" style={{ width: 'clamp(80px, 25.6rem, 130px)', height: 'clamp(80px, 25.6rem, 130px)', borderRadius: '50%', backgroundColor: 'rgba(16,185,129,.15)', animation: 'rm-success-pop .4s cubic-bezier(.34,1.56,.64,1)' }}>
               <span className="icon-material" style={{ fontSize: 'clamp(56px, 14.3rem, 78px)', color: '#10B981', fontVariationSettings: "'FILL' 1" }}>check</span>
             </div>
@@ -141,8 +147,8 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
           </div>
         </div>
       ) : (
-        <div className="overlay-base" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 9999, animation: isOpen ? 'rm-overlay-in .25s ease-out' : undefined, opacity: isOpen ? 1 : 0 }}>
-          <div ref={sheetRef} className="sheet-base review-sheet-transition" style={{ maxHeight: step === 1 ? '60vh' : '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: isOpen ? 'rm-sheet-up .35s cubic-bezier(.32,.72,0,1)' : undefined, transform: isOpen ? 'translateY(0) translateZ(0)' : 'translateY(100%) translateZ(0)' }}>
+        <div className="overlay-base" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 9999, animation: animate ? 'rm-overlay-in .25s ease-out' : undefined, opacity: animate ? 1 : 0 }}>
+          <div ref={sheetRef} className="sheet-base review-sheet-transition" style={{ maxHeight: step === 1 ? '60vh' : '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: animate ? 'rm-sheet-up .35s cubic-bezier(.32,.72,0,1)' : undefined, transform: animate ? 'translateY(0) translateZ(0)' : 'translateY(100%) translateZ(0)' }}>
             {step === 1 && (
               <>
                 <div style={{ padding: '16px 16px 8px', backgroundColor: '#FEF9F5', zIndex: 10, flexShrink: 0 }}>
@@ -170,7 +176,7 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
                         display: 'flex', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 28, padding: '16px',
                         boxShadow: '0 12px 32px rgba(0,0,0,0.1)', textAlign: 'left', border: 'none', gap: 16
                       }}>
-                      <img src={b.imageUrl} alt={b.title} loading="lazy" style={{ width: 'clamp(64px, 16.4rem, 80px)', height: 'clamp(64px, 16.4rem, 80px)', borderRadius: 20, objectFit: 'cover', flexShrink: 0 }} />
+                      <img src={b.imageUrl} alt={b.title} loading="lazy" decoding="async" style={{ width: 'clamp(64px, 16.4rem, 80px)', height: 'clamp(64px, 16.4rem, 80px)', borderRadius: 20, objectFit: 'cover', flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <h4 style={{ fontSize: 'clamp(17px, 4.3rem, 22px)', fontWeight: 800, color: '#1E293B', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {b.title}
@@ -212,7 +218,7 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
                   {CATEGORIES.map(c => (
                     <button key={c.id} className="btn-reset" onClick={() => { setSelectedTarget({ type: 'category', item: c }); setStep(3); }}
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 'clamp(80px, 20rem, 110px)', flexShrink: 0 }}>
-                      <img src={c.image} alt={t(c.nameKey)} loading="lazy" style={{ width: 'clamp(80px, 20rem, 110px)', height: 'clamp(80px, 20rem, 110px)', borderRadius: 20, objectFit: 'cover', marginBottom: 8, border: `3px solid ${c.borderColor}`, boxShadow: `0 8px 16px ${c.borderColor}40` }} />
+                      <img src={c.image} alt={t(c.nameKey)} loading="lazy" decoding="async" style={{ width: 'clamp(80px, 20rem, 110px)', height: 'clamp(80px, 20rem, 110px)', borderRadius: 20, objectFit: 'cover', marginBottom: 8, border: `3px solid ${c.borderColor}`, boxShadow: `0 8px 16px ${c.borderColor}40` }} />
                       <span style={{ fontSize: 'clamp(12px, 3.1rem, 16px)', fontWeight: 700, color: '#1E293B', textAlign: 'center' }}>{t(c.nameKey)}</span>
                     </button>
                   ))}
@@ -223,7 +229,7 @@ export default function ReviewModal({ onClose, isOpen = true }: Props) {
                   {STAFF.map(s => (
                     <button key={s.id} className="btn-reset" onClick={() => { setSelectedTarget({ type: 'staff', item: s }); setStep(3); }}
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: 'clamp(80px, 20rem, 110px)', flexShrink: 0 }}>
-                      <img src={s.image} alt={s.name} loading="lazy" style={{ width: 'clamp(80px, 20rem, 110px)', height: 'clamp(80px, 20rem, 110px)', borderRadius: 20, objectFit: 'cover', marginBottom: 10, border: `3px solid ${s.borderColor}`, boxShadow: `0 8px 16px ${s.borderColor}40` }} />
+                      <img src={s.image} alt={s.name} loading="lazy" decoding="async" style={{ width: 'clamp(80px, 20rem, 110px)', height: 'clamp(80px, 20rem, 110px)', borderRadius: 20, objectFit: 'cover', marginBottom: 10, border: `3px solid ${s.borderColor}`, boxShadow: `0 8px 16px ${s.borderColor}40` }} />
                       <span style={{ fontSize: 'clamp(13px, 3.3rem, 18px)', fontWeight: 800, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{s.name}</span>
                       <span style={{ fontSize: 'clamp(11px, 2.8rem, 14px)', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', marginTop: 2 }}>{s.role}</span>
                     </button>

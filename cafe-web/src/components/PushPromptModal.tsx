@@ -45,24 +45,33 @@ export default function PushPromptModal() {
     setIsVisible(false);
   };
 
-  const handleEnable = async () => {
-    try {
-      await useProfileStore.getState().requestPushPermission(VAPID_KEY);
-      const perm = (Notification as any).permission;
-      if (perm === 'granted') {
-        localStorage.setItem('hasPromptedPush', 'granted');
-        localStorage.setItem('pushEnabled', 'true');
-      } else if (perm === 'denied') {
-        localStorage.setItem('hasPromptedPush', 'denied');
-      } else {
-        // perm is default - they dismissed the native prompt
-        // Do not set hasPromptedPush so it will show again next time
-        localStorage.removeItem('hasPromptedPush');
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const handleEnable = () => {
+    // Close our own modal immediately so the user sees ONLY the native iOS
+    // permission dialog. Previously we awaited requestPushPermission (which on
+    // iOS also fetches the FCM token and can hang), so this modal lingered on
+    // screen even after the user had already allowed in the iOS dialog.
     setIsVisible(false);
+
+    // Request permission + token in the background. requestPushPermission is a
+    // store method, so it keeps running independently of this unmounted modal.
+    (async () => {
+      try {
+        await useProfileStore.getState().requestPushPermission(VAPID_KEY);
+        const perm = (Notification as any).permission;
+        if (perm === 'granted') {
+          localStorage.setItem('hasPromptedPush', 'granted');
+          localStorage.setItem('pushEnabled', 'true');
+        } else if (perm === 'denied') {
+          localStorage.setItem('hasPromptedPush', 'denied');
+        } else {
+          // perm is default - they dismissed the native prompt
+          // Do not set hasPromptedPush so it will show again next time
+          localStorage.removeItem('hasPromptedPush');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
   };
 
   useEffect(() => {

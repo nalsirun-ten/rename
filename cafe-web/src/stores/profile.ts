@@ -75,7 +75,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     if (!hasExisting) set({ isLoading: true });
     const { data, error } = await retry(() => supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, phone, visits, stamps_count, loyalty_number, avatar_url, last_roulette_spin, active_prize')
       .eq('id', userId)
       .single());
       
@@ -153,10 +153,20 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       }
       
       if (Object.keys(updates).length > 0) {
-        await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', session.user.id);
+        // profiles has no RLS UPDATE policy for regular users (only "Staff can
+        // update profiles"), so a direct table update silently affects 0 rows.
+        // Route through the SECURITY DEFINER RPC, which writes only the caller's
+        // own row (name/avatar/phone). Surface the error instead of swallowing it
+        // so the onboarding flow can keep the modal open on failure.
+        const { error: rpcError } = await retry(() => supabase.rpc('update_own_profile', {
+          p_full_name: updates.full_name ?? null,
+          p_avatar_url: 'avatar_url' in updates ? (updates.avatar_url ?? '') : null,
+          p_phone: updates.phone ?? null,
+        }));
+        if (rpcError) {
+          console.error('update_own_profile failed:', rpcError);
+          throw rpcError;
+        }
       }
     }
   },

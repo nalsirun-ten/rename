@@ -95,20 +95,20 @@ const BranchCard = React.memo(function BranchCard({ branch }: Props) {
           alignItems: 'center',
           height: 'clamp(40px, 10.2rem, 60px)',
           padding: '0 12px',
-          backgroundColor: isOpen ? '#1B5E3D' : '#FEE2E2',
+          backgroundColor: isOpen ? '#BBF7D0' : '#FEE2E2',
           borderRadius: 22,
         }}>
           <div style={{
             width: 'clamp(8px, 2rem, 12px)',
             height: 'clamp(8px, 2rem, 12px)',
             borderRadius: '50%',
-            backgroundColor: isOpen ? '#FFF' : '#EF4444',
+            backgroundColor: isOpen ? '#22C55E' : '#EF4444',
             marginRight: 8,
           }} />
           <span style={{
             fontSize: 'clamp(13px, 3.3rem, 18px)',
             fontWeight: 700,
-            color: isOpen ? '#FFF' : '#991B1B',
+            color: isOpen ? '#166534' : '#991B1B',
             lineHeight: 1,
           }}>
             {isOpen ? t('branch_open') : t('branch_closed')}

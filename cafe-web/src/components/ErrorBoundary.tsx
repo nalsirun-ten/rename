@@ -24,11 +24,23 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('ErrorBoundary caught:', error, info);
+    
+    // Automatically reload on chunk load errors (often happens after a new deployment)
+    if (
+      error.name === 'ChunkLoadError' ||
+      error.message.includes('Failed to fetch dynamically imported module') ||
+      error.message.includes('Importing a module script failed')
+    ) {
+      window.location.reload();
+      return;
+    }
+
     this.props.onError?.(error, info);
   }
 
   handleReset = () => {
-    this.setState({ hasError: false });
+    // Force a hard reload if resetting doesn't work (which is often the case with stale cache)
+    window.location.reload();
   };
 
   render() {
